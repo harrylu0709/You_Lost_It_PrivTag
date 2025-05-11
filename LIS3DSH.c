@@ -2,7 +2,6 @@
 #include <string.h>
 #include "LIS3DSH.h"
 
-
 uint8_t dummy[2] = {0xFF, 0xFF};
 void SPI1_GPIOInits(void)
 {

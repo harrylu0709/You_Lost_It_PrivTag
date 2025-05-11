@@ -242,7 +242,7 @@ void Reset_Handler(void)
 	}
 
     //Initialize the .bss section to zero in SRAM
-	uint32_t bss_size = &_ebss - &_sbss;
+	uint32_t bss_size = (uint32_t)&_ebss - (uint32_t)&_sbss;
 	pDst = (uint8_t*)&_sbss;
 	for(uint32_t i =0; i < bss_size; i++)
 	{

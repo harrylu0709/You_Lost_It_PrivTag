@@ -3,9 +3,15 @@
 #include <stdio.h>
 #include "LIS3DSH.h"
 #include "led.h"
+#include "ble.h"
 
 #define SYSTICK_TIM_CLK   16000000UL //16MHz
 #define LED_PERIOD_MS	  50
+#define ONE_MIN_CNT	 	  100
+#define IRQNO_TIMER5  	  50
+#define DWT_CTRL    (*(volatile uint32_t*)0xE0001000)
+#define DWT_CYCCNT  (*(volatile uint32_t*)0xE0001004)
+#define DEMCR       (*(volatile uint32_t*)0xE000EDFC)
 extern I2C_Handle_t g_ds1307I2CHandle;
 TIM_Handle_t Timer5_Handle;
 
@@ -68,16 +74,36 @@ void TIM5_init(void)
 	timer_init(&Timer5_Handle);
 }	
 
-void delay(void)
+void dwt_init(void) 
 {
-	for(uint32_t i = 0 ; i < 599000/2 ; i ++);
+    DEMCR |= (1 << 24);     // Enable trace and debug
+    DWT_CTRL |= 1;          // Enable the cycle counter
+    DWT_CYCCNT = 0;         // Reset the counter
 }
+
+void dwt_delay_us(uint32_t us) 
+{
+    uint32_t cycles = us * 16;  // 16 MHz = 16 cycles per microsecond
+    uint32_t start = DWT_CYCCNT;
+    while ((DWT_CYCCNT - start) < cycles);
+}
+
+void dwt_delay_ms(uint32_t ms) 
+{
+    while (ms--) {
+        dwt_delay_us(1000);
+    }
+}
+
 
 //semihosting init function
 extern void initialise_monitor_handles(void);
+uint32_t *pNVIC_ISPR1 = (uint32_t*)0XE000E204;
 volatile uint8_t start_cnt = 0;
 volatile uint8_t id_cnt = 0;
 volatile int8_t start_flag = 0;
+volatile int8_t one_min_cnt = ONE_MIN_CNT;
+int dataAvailable = 0;
 
 uint8_t start_frame[4]= {0x10, 0x01, 0x10, 0x01};
 uint8_t student_id[8]= {0x00, 0x01, 0x01, 0x01, 0x10, 0x11, 0x00, 0x11}; //ID is 5555
@@ -94,67 +120,101 @@ int16_t z;
 
 	part3
 	https://docs.google.com/document/d/1LF4pFkJgdbv1WE2SsijvQHM_YJ8eBC7BEsMf994AXnU/edit?tab=t.0#heading=h.lc5fcf8se9xg
-*/
 
-int twos_complement_to_signed(int value, int bitWidth) {
+https://github.com/ucsd-cse190b-w25/project-3-adding-low-energy-radio-communication-teamone?tab=readme-ov-file
+
+target remote localhost:3333
+monitor reset init
+monitor flash write_image erase final_sh.elf
+monitor arm semihosting enable
+monitor reset halt
+monitor resume
+
+	*/
+
+int twos_complement_to_signed(int value, int bitWidth) 
+{
     if (value & (1U << (bitWidth - 1))) {
         // Negative number
         value |= ~((1U << bitWidth) - 1);  // Sign-extend the value
     }
     return value;
 }
+
 int main(void)
 {
-	//initialise_monitor_handles();
-	LIS3DSH_init();
-	led_init();
-	TIM5_init();
 	int res_x;
 	int res_y;
-	int res_z;
+	int res_z;	
+
+	initialise_monitor_handles();
+	printf("hello world\n");
+
+	dwt_init();
+	LIS3DSH_init();
+	led_init();
+	//TIM5_init();
+
+	xnucleo_init();
+	printf("xnucleo_init finish\n");
+	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_RESET);
+	dwt_delay_ms(10);
+	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_SET);
+
+	ble_init();
+	printf("ble_init finish\n");
+	dwt_delay_ms(10);
+
+	uint8_t nonDiscoverable = 0;
+	printf("init finish\n");
+	while (1)
+	{
+		if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT,BLE_INT_Pin))
+		{
+			printf("1\n");
+			catchBLE();
+		}
+		else
+		{
+			printf("2\n");
+			dwt_delay_ms(1000);
+			// Send a string to the NORDIC UART service, remember to not include the newline
+			unsigned char test_str[] = "youlostit BLE test";
+			//updateCharValue(NORDIC_UART_SERVICE_HANDLE, READ_CHAR_HANDLE, 0, sizeof(test_str)-1, test_str);
+			//uint8_t test_str[20] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J'};
+			updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str) - 1, test_str);
+
+		}
+		// Wait for interrupt, only uncomment if low power is needed
+		//__WFI();
+	}
+
+	return 0;
+    /* Manually trigger TIM5 interrupt */
+    *pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
+
 	while(1)
 	{
-		LIS3DSH_read_xyz(&x, &y, &z);
-		res_x = twos_complement_to_signed(x, 16);
-		res_y = twos_complement_to_signed(y, 16);
-		res_z = twos_complement_to_signed(z, 16);
+		if(one_min_cnt)
+		{
+			start_flag = 0;
+			start_cnt = 0;
+			id_cnt = 0;
+			LIS3DSH_read_xyz(&x, &y, &z);
+			res_x = twos_complement_to_signed(x, 16);
+			res_y = twos_complement_to_signed(y, 16);
+			res_z = twos_complement_to_signed(z, 16);
+			if(	   res_x > LED_TH_X || res_x  < -LED_TH_X\
+				|| res_y > LED_TH_Y || res_y  < -LED_TH_Y\
+				|| res_z > LED_TH_Z || res_z  < -LED_TH_Z)
+			{
+				one_min_cnt = ONE_MIN_CNT;
+			}
+		}
 
-		//printf("%d %d %d\n",x,y,z);
-		if(res_x > LED_TH_X)
-			led_on(LED_GPIO_RED);
-		else
-			led_off(LED_GPIO_RED);
-
-		if(res_x  < -LED_TH_X)
-			led_on(LED_GPIO_GREEN);
-		else
-			led_off(LED_GPIO_GREEN);
-
-		if(res_y > LED_TH_Y)
-			led_on(LED_GPIO_ORANGE);
-		else
-			led_off(LED_GPIO_ORANGE);
-
-		if(res_y  < -LED_TH_Y)
-			led_on(LED_GPIO_BLUE);
-		else
-			led_off(LED_GPIO_BLUE);
-
-		// if(res_z > LED_TH_Z)
-		// 	led_on(LED_GPIO_ORANGE);
-		// else
-		// 	led_off(LED_GPIO_ORANGE);
-
-		// if(res_z  < -LED_TH_Z)
-		// 	led_on(LED_GPIO_BLUE);
-		// else
-		// 	led_off(LED_GPIO_BLUE);
 	}
 	
 	return 0;
-	
-	
-	while(1);
 	//I2C_IRQInterruptConfig(IRQ_NO_I2C1_EV, ENABLE);
 	//I2C_IRQPriorityConfig(IRQ_NO_I2C1_EV, NVIC_IRQ_PRI0);
 
@@ -172,22 +232,37 @@ int main(void)
 
 void TIM5_IRQHandler(void)
 {
-	if(start_flag == 0)
+	if(one_min_cnt > 0)
 	{
-		leds_set(start_frame[start_cnt++]);
-		if(start_cnt == 4) start_flag = 1;
+		one_min_cnt--;
 	}
-	else if(start_flag == 1)
+	else
 	{
-		leds_set(student_id[id_cnt++]);
-		if(id_cnt == 8) start_flag = -1;
+		if(start_flag == 0)
+		{
+			leds_set(start_frame[start_cnt++]);
+			if(start_cnt == 4) start_flag = 1;
+		}
+		else if(start_flag == 1)
+		{
+			leds_set(student_id[id_cnt++]);
+			if(id_cnt == 8)
+			{
+				start_flag = -1;
+			} 
+		}
+		// else
+		// 	one_min_cnt = ONE_MIN_CNT;
 	}
-
 	TIM_IRQHandling(&Timer5_Handle);
  	//Timer5_Handle.pTIMx->SR &= ~(1<<0);
 }
 
-
+void EXTI9_5_IRQHandler(void)
+{
+	dataAvailable=1;
+	GPIO_IRQHandling(BLE_INT_Pin); //clear the pending event from exti line
+}
 // #if I2C_INT_ENABLE
 // void I2C1_EV_IRQHandler(void)
 // {

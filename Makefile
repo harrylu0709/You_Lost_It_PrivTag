@@ -48,7 +48,7 @@ program_elf:
 	openocd -f board/stm32f4discovery.cfg -c init -c halt -c "flash write_image erase $(ELF)" -c reset -c shutdown
 
 elf_sh:
-	openocd -f board/stm32f4discovery.cfg -c init -c halt -c "flash write_image erase $(ELF_SH)" -c "arm semihosting enable" -c reset
+	openocd -f board/stm32f4discovery.cfg -c init -c halt -c "flash write_image erase $(ELF_SH)" -c init -c "arm semihosting enable" -c reset
 
 program_bin:
 	openocd -f board/stm32f4discovery.cfg -c "program $(BIN) verify reset exit 0x08000000"

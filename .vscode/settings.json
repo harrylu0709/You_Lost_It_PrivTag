@@ -2,6 +2,7 @@
     "files.associations": {
         "*.c": "c",
         "stm32f407xx.h": "c",
-        "led.h": "c"
+        "led.h": "c",
+        "ble.h": "c"
     }
 }
