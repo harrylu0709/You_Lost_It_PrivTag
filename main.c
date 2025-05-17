@@ -140,7 +140,14 @@ int twos_complement_to_signed(int value, int bitWidth)
     }
     return value;
 }
+uint8_t GPIO_ReadFromOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
+{
+   uint8_t value;
 
+   value = (uint8_t )((pGPIOx->ODR  >> PinNumber) & 0x00000001 ) ;
+
+   return value;
+}
 int main(void)
 {
 	int res_x;
@@ -156,12 +163,24 @@ int main(void)
 	//TIM5_init();
 
 	xnucleo_init();
-	printf("xnucleo_init finish\n");
+	// printf("xnucleo_init finish\n");
+	//return 0;
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_RESET);
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_SET);
+	// printf("mosi=%d\n",GPIO_ReadFromOutputPin(GPIOB, SPI2_MOSI));
+	// printf("clk=%d\n",GPIO_ReadFromOutputPin(GPIOB, SPI2_SCK));
+	// printf("miso=%d\n",GPIO_ReadFromOutputPin(GPIOB, SPI2_MISO));
 
+	// printf("mosi=%d\n",GPIO_ReadFromInputPin(GPIOA, SPI1_MOSI));
+	// printf("clk=%d\n",GPIO_ReadFromInputPin(GPIOA, SPI1_SCK));
+	// printf("miso=%d\n",GPIO_ReadFromInputPin(GPIOA, SPI1_MISO));
+
+	// printf("%d\n",GPIO_ReadFromOutputPin(GPIOE, 3));
+	//return 0;
+	
 	ble_init();
+	//return 0;
 	printf("ble_init finish\n");
 	dwt_delay_ms(10);
 

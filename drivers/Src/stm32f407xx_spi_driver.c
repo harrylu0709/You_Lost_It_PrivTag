@@ -159,44 +159,44 @@ void SPI_TransmitReceive(SPI_RegDef_t *pSPIx,uint8_t *pTxBuffer, uint8_t *pRxBuf
 	printf("end\n");
 }
 #else
-// void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t Len, uint32_t RxLen)
-// {
-//     while (Len > 0)
-//     {
-//         // Wait until TXE is set
-//         while (SPI_GetFlagStatus(pSPIx, SPI_TXE_FLAG) == FLAG_RESET);
+void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t Len, uint32_t RxLen)
+{
+    while (Len > 0)
+    {
+        // Wait until TXE is set
+        while (SPI_GetFlagStatus(pSPIx, SPI_TXE_FLAG) == FLAG_RESET);
 
-//         // 1. Check DFF bit for 8-bit or 16-bit mode
-//         if (pSPIx->CR1 & (1 << SPI_CR1_DFF))
-//         {
-//             // 16-bit
-//             pSPIx->DR = *((uint16_t*)pTxBuffer);
-//             Len -= 2;
+        // 1. Check DFF bit for 8-bit or 16-bit mode
+        if (pSPIx->CR1 & (1 << SPI_CR1_DFF))
+        {
+            // 16-bit
+            pSPIx->DR = *((uint16_t*)pTxBuffer);
+            Len -= 2;
 
-//             // Wait until RXNE is set
-//             while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
+            // Wait until RXNE is set
+            while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
 
-//             *((uint16_t*)pRxBuffer) = pSPIx->DR;
+            *((uint16_t*)pRxBuffer) = pSPIx->DR;
 
-//             pTxBuffer += 2;
-//             pRxBuffer += 2;
-//         }
-//         else
-//         {
-//             // 8-bit
-//             pSPIx->DR = *pTxBuffer;
-//             Len--;
+            pTxBuffer += 2;
+            pRxBuffer += 2;
+        }
+        else
+        {
+            // 8-bit
+            pSPIx->DR = *pTxBuffer;
+            Len--;
 
-//             // Wait until RXNE is set
-//             while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
+            // Wait until RXNE is set
+            while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
 
-//             *pRxBuffer = pSPIx->DR;
+            *pRxBuffer = pSPIx->DR;
 
-//             pTxBuffer++;
-//             pRxBuffer++;
-//         }
-//     }
-// }
+            pTxBuffer++;
+            pRxBuffer++;
+        }
+    }
+}
 #endif
 /*********************************************************************
  * @fn      		  - SPI_SendData

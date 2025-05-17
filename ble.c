@@ -143,6 +143,9 @@ void ble_gpio_init()
 
 	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI15);
 	GPIO_IRQInterruptConfig(IRQ_NO_EXTI9_5, ENABLE);
+
+	GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
+	GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_RST_Pin, 1);
 }
 
 void SPI2_GPIOInits(void)
@@ -154,7 +157,13 @@ void SPI2_GPIOInits(void)
 	SPIPins.GPIO_PinConfig.GPIO_PinAltFunMode = 5;
 	SPIPins.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	SPIPins.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
-	SPIPins.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_MEDIUM;
+	SPIPins.GPIO_PinConfig.GPIO_PinSpeed = GPOI_SPEED_HIGH;
+
+
+
+
+
+	
 
 	SPIPins.GPIO_PinConfig.GPIO_PinNumber = SPI2_SCK;
 	GPIO_Init(&SPIPins);
@@ -162,8 +171,12 @@ void SPI2_GPIOInits(void)
 	SPIPins.GPIO_PinConfig.GPIO_PinNumber = SPI2_MOSI;
 	GPIO_Init(&SPIPins);
 
+
+	//SPIPins.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_PIN_PU;
 	SPIPins.GPIO_PinConfig.GPIO_PinNumber = SPI2_MISO;
 	GPIO_Init(&SPIPins);
+	// GPIO_WriteToOutputPin(GPIOB, SPI2_MOSI, 1);
+	// GPIO_WriteToOutputPin(GPIOB, SPI2_SCK, 1);
 }
 
 void SPI2_Inits(void)
@@ -190,66 +203,17 @@ void xnucleo_init()
 
 }
 
-void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t Len, uint32_t RxLen)
-{
-    while (Len > 0)
-    {
-        // Wait until TXE is set
-        while (SPI_GetFlagStatus(pSPIx, SPI_TXE_FLAG) == FLAG_RESET);
-
-        // 1. Check DFF bit for 8-bit or 16-bit mode
-        if (pSPIx->CR1 & (1 << SPI_CR1_DFF))
-        {
-            // 16-bit
-            pSPIx->DR = *((uint16_t*)pTxBuffer);
-            Len -= 2;
-
-            // Wait until RXNE is set
-            while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
-
-            *((uint16_t*)pRxBuffer) = pSPIx->DR;
-
-            pTxBuffer += 2;
-            pRxBuffer += 2;
-        }
-        else
-        {
-            // 8-bit
-            pSPIx->DR = *pTxBuffer;
-            Len--;
-
-            // Wait until RXNE is set
-            while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
-
-            *pRxBuffer = pSPIx->DR;
-
-            pTxBuffer++;
-            pRxBuffer++;
-        }
-    }
-}
-
 void ble_init()
 {
-	// uint8_t tx_dummy[] = {0x0b, 0x00, 0x00, 0x00, 0x00};
-	// uint8_t rx_dummy[5];
-	// SPI_PeripheralControl(SPI2, ENABLE);
-	// GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
-
-	// //SPI2 in this case, it could change according to the board
-	// //we send a byte containing a request of reading followed by 4 dummy bytes
-	
-	// SPI_TransmitReceive(SPI2, tx_dummy, rx_dummy, 5, 5);
-	// GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-	// SPI_PeripheralControl(SPI2, DISABLE);
 	printf("ble init\n");
 	//fetching the reset event
 	rxEvent = (uint8_t *)malloc(EVENT_STARTUP_SIZE);
 	int res;
-
+	SPI_PeripheralControl(SPI2, ENABLE);
 	while (!dataAvailable);
 	res = fetchBleEvent(rxEvent, EVENT_STARTUP_SIZE);
 	printf("fetchble\n");
+	//return;
 	if (res == BLE_OK)
 	{
 		res = checkEventResp(rxEvent, EVENT_STATUP_DATA, EVENT_STARTUP_SIZE);
@@ -328,7 +292,7 @@ void ble_init()
 	if (stackInitCompleteFlag == 255)
 	{
 		//turn on led blue if everything was fine
-		GPIO_WriteToOutputPin(BLE_GPIO_PORT, LED_GPIO_BLUE, 1);
+		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 1);
 	}
 	return;
 }
@@ -353,39 +317,36 @@ int fetchBleEvent(uint8_t * container, int size)
 	{
 
 		dwt_delay_ms(5);
-		SPI_PeripheralControl(SPI2, ENABLE);
+		// SPI_PeripheralControl(SPI2, ENABLE);
 
-		//SPI2 in this case, it could change according to the board
-		//we send a byte containing a request of reading followed by 4 dummy bytes
-		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
-		dwt_delay_ms(1);
-		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
-		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-		SPI_PeripheralControl(SPI2, DISABLE);
+		// //SPI2 in this case, it could change according to the board
+		// //we send a byte containing a request of reading followed by 4 dummy bytes
+		// GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
+		// SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
+		// GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
+		// SPI_PeripheralControl(SPI2, DISABLE);
 	
 		//PIN_CS of SPI2 LOW
-		SPI_PeripheralControl(SPI2, ENABLE);
+		//SPI_PeripheralControl(SPI2, ENABLE);
 
 		//SPI2 in this case, it could change according to the board
 		//we send a byte containing a request of reading followed by 4 dummy bytes
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
-		dwt_delay_ms(1);
+
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
-		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-		SPI_PeripheralControl(SPI2, DISABLE);
+
 		int j;
 		for(j=0;j<5;j++)
 		{
 			printf("%x ",slave_header[j]);
 		}
 		printf(" 1\n");
+		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
 		dwt_delay_ms(1);
-
-		SPI_PeripheralControl(SPI2, ENABLE);
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
 
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
-
+		
 		//let's get the size of data available
 		int dataSize;
 		dataSize = (slave_header[3] | slave_header[4] << 8);
@@ -412,12 +373,12 @@ int fetchBleEvent(uint8_t * container, int size)
 
 			}
 			GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-			SPI_PeripheralControl(SPI2, DISABLE);
+			//SPI_PeripheralControl(SPI2, DISABLE);
 		}
 		else
 		{
 			GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-			SPI_PeripheralControl(SPI2, DISABLE);
+			//SPI_PeripheralControl(SPI2, DISABLE);
 			return -1;
 		}
 
@@ -467,12 +428,18 @@ void sendCommand(uint8_t * command, int size)
 	do
 	{
 		
-		SPI_PeripheralControl(SPI2, ENABLE);
+		//SPI_PeripheralControl(SPI2, ENABLE);
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
 
 		//wait until it is possible to write
 		//while(!dataAvailable);
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
+		int j;
+		for(j=0;j<5;j++)
+		{
+			printf("%x ",slave_header[j]);
+		}
+		printf(" 3\n");
 		int bufferSize = (slave_header[2] << 8 | slave_header[1]);
 		if (bufferSize >= size)
 		{
@@ -484,7 +451,7 @@ void sendCommand(uint8_t * command, int size)
 			result = -1;
 		}
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-		SPI_PeripheralControl(SPI2, DISABLE);
+		//SPI_PeripheralControl(SPI2, DISABLE);
 		dataAvailable = 0;
 	} while (result != 0);
 
@@ -610,7 +577,7 @@ int BLE_command(uint8_t * command, int size, uint8_t * result, int sizeRes, int 
 		response = checkEventResp(rxEvent, result, sizeRes);
 		//printf("ble ok\n");
 	}
-	//dwt_delay_ms(10);
+	dwt_delay_ms(10);
 	if (response != BLE_OK)
 	{
 		// int j;

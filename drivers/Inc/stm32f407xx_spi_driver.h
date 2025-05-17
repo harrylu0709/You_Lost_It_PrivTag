@@ -138,7 +138,7 @@ void SPI_DeInit(SPI_RegDef_t *pSPIx);
 /*
  * Data Send and Receive
  */
-//void SPI_TransmitReceive(SPI_RegDef_t *pSPIx,uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t TxLen, uint32_t RxLen)
+void SPI_TransmitReceive(SPI_RegDef_t *pSPIx,uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t TxLen, uint32_t RxLen);
 void SPI_SendData(SPI_RegDef_t *pSPIx,uint8_t *pTxBuffer, uint32_t Len);
 void SPI_ReceiveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t Len);
 
