@@ -83,6 +83,7 @@ uint8_t ACI_GAP_SET_NON_DISCOVERABLE[] = {0x01, 0x81, 0xFC, 0x00}; // TODO - fil
 uint8_t ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE[] = {0x04, 0x0E, 0x04, 0x01, 0x81, 0xFC, 0x00}; // TODO - fill this in
 
 extern int dataAvailable;
+extern uint8_t is_disoverable;
 extern void dwt_delay_ms(uint32_t ms);
 
 // Device name sent in BLE advertisement packets
@@ -205,14 +206,14 @@ void xnucleo_init()
 
 void ble_init()
 {
-	printf("ble init\n");
+	//printf("ble init\n");
 	//fetching the reset event
 	rxEvent = (uint8_t *)malloc(EVENT_STARTUP_SIZE);
 	int res;
 	SPI_PeripheralControl(SPI2, ENABLE);
 	while (!dataAvailable);
 	res = fetchBleEvent(rxEvent, EVENT_STARTUP_SIZE);
-	printf("fetchble\n");
+	//printf("fetchble\n");
 	//return;
 	if (res == BLE_OK)
 	{
@@ -225,7 +226,7 @@ void ble_init()
 	}
 	dwt_delay_ms(10);
 	free(rxEvent);
-	printf("gatt_init\n");
+	//printf("gatt_init\n");
 	//INIT GATT
 	if (BLE_command(ACI_GATT_INIT, sizeof(ACI_GATT_INIT), ACI_GATT_INIT_COMPLETE, sizeof(ACI_GATT_INIT_COMPLETE), 0) == BLE_OK)
 	{
@@ -233,7 +234,7 @@ void ble_init()
 
 	}
 	free(rxEvent);
-	printf("gap_init\n");
+	//printf("gap_init\n");
 	//INIT GAP, actually the handle that i get is a GATT handle of a service, will change the name later
 	if (BLE_command(ACI_GAP_INIT, sizeof(ACI_GAP_INIT), ACI_GAP_INIT_COMPLETE, sizeof(ACI_GAP_INIT_COMPLETE), 3) == BLE_OK)
 	{
@@ -243,12 +244,13 @@ void ble_init()
 		memcpy(GAP_CHAR_APP_HANDLE, rxEvent + 11, 2);
 	}
 	free(rxEvent);
-	printf("set gap service\n");
+	//printf("set gap service\n");
 	//SET THE NAME OF THE BOARD IN THE SERVICE CREATED AUTOMATICALLY
 	updateCharValue(GAP_SERVICE_HANDLE, GAP_CHAR_NAME_HANDLE, 0, sizeof(deviceName), deviceName);
+	//printf("finish update\n");
 	stackInitCompleteFlag |= 0x08;
-	free(rxEvent);
-	printf("set gap auth\n");
+	//free(rxEvent);
+	//printf("set gap auth\n");
 	//INIT AUTH
 	if (BLE_command(ACI_GAP_SET_AUTH, sizeof(ACI_GAP_SET_AUTH), ACI_GAP_SET_AUTH_RESP, sizeof(ACI_GAP_SET_AUTH_RESP), 0) == BLE_OK)
 	{
@@ -258,7 +260,7 @@ void ble_init()
 	free(rxEvent);
 
 	//SET_TX_LEVEL
-	printf("set tx power\n");
+	//printf("set tx power\n");
 	if (BLE_command(ACI_HAL_SET_TX_POWER_LEVEL, sizeof(ACI_HAL_SET_TX_POWER_LEVEL), ACI_HAL_SET_TX_POWER_LEVEL_COMPLETE, sizeof(ACI_HAL_SET_TX_POWER_LEVEL_COMPLETE), 0) == BLE_OK)
 	{
 		stackInitCompleteFlag |= 0x20;
@@ -267,7 +269,7 @@ void ble_init()
 	free(rxEvent);
 
 	//SET SCAN RESPONSE DATA
-	printf("set scan response\n");
+	//printf("set scan response\n");
 	if (BLE_command(HCI_LE_SET_SCAN_RESPONSE_DATA, sizeof(HCI_LE_SET_SCAN_RESPONSE_DATA), HCI_LE_SET_SCAN_RESPONSE_DATA_COMPLETE, sizeof(HCI_LE_SET_SCAN_RESPONSE_DATA_COMPLETE), 0) == BLE_OK)
 	{
 		stackInitCompleteFlag |= 0x40;
@@ -283,12 +285,12 @@ void ble_init()
 	addService(UUID_NORDIC_UART_SERVICE, NORDIC_UART_SERVICE_HANDLE, SET_ATTRIBUTES(7)); //SET_ATTRIBUTES(1+2+3*2+3+3));//1 atribute service +2 attribute char readable+3*(2 NOTIFYABLE READABLE charachteristics)
 	addCharacteristic(UUID_CHAR_WRITE, WRITE_CHAR_HANDLE, NORDIC_UART_SERVICE_HANDLE, 20, NOTIFIBLE, 0x00, 0, 16, 1);
 	//add the nordic UART charachteristics
-	printf("tx\n");
+	//printf("tx\n");
 	addCharacteristic(UUID_CHAR_READ, READ_CHAR_HANDLE, NORDIC_UART_SERVICE_HANDLE, 20, (WRITABLE | WRITE_WITHOUT_RESP), 0x00, 0x01, 16, 1);
-	printf("rx\n");
+	//printf("rx\n");
 
 
-	printf("flag = %d\n", stackInitCompleteFlag);
+	//printf("flag = %d\n", stackInitCompleteFlag);
 	if (stackInitCompleteFlag == 255)
 	{
 		//turn on led blue if everything was fine
@@ -308,7 +310,6 @@ void standbyBle()
 
 int fetchBleEvent(uint8_t * container, int size)
 {
-	//printf("start fetch\n");
 	uint8_t master_header[] = {0x0b, 0x00, 0x00, 0x00, 0x00};
 	uint8_t slave_header[5];
 
@@ -321,13 +322,6 @@ int fetchBleEvent(uint8_t * container, int size)
 
 		// //SPI2 in this case, it could change according to the board
 		// //we send a byte containing a request of reading followed by 4 dummy bytes
-		// GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
-		// SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
-		// GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-		// SPI_PeripheralControl(SPI2, DISABLE);
-	
-		//PIN_CS of SPI2 LOW
-		//SPI_PeripheralControl(SPI2, ENABLE);
 
 		//SPI2 in this case, it could change according to the board
 		//we send a byte containing a request of reading followed by 4 dummy bytes
@@ -335,12 +329,12 @@ int fetchBleEvent(uint8_t * container, int size)
 
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
 
-		int j;
-		for(j=0;j<5;j++)
-		{
-			printf("%x ",slave_header[j]);
-		}
-		printf(" 1\n");
+		// int j;
+		// for(j=0;j<5;j++)
+		// {
+		// 	printf("%x ",slave_header[j]);
+		// }
+		// printf(" 1\n");
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
 		dwt_delay_ms(1);
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
@@ -350,12 +344,12 @@ int fetchBleEvent(uint8_t * container, int size)
 		//let's get the size of data available
 		int dataSize;
 		dataSize = (slave_header[3] | slave_header[4] << 8);
-		for(j=0;j<5;j++)
-		{
-			printf("%x ",slave_header[j]);
-		}
-		printf(" 2\n");
-		printf("datasize=%d\n",dataSize);
+		// for(j=0;j<5;j++)
+		// {
+		// 	printf("%x ",slave_header[j]);
+		// }
+		// printf(" 2\n");
+		// printf("datasize=%d\n",dataSize);
 		int i;
 		char dummy = 0xff;
 
@@ -396,24 +390,13 @@ int fetchBleEvent(uint8_t * container, int size)
 int checkEventResp(uint8_t * event, uint8_t * reference, int size)
 {
 	int j = 0;
-	// if(flag ==1)
-	// {
-	// 	for(j=0;j<size;j++){
-	// 		printf("%x %x\n", event[j], reference[j]);
-	// 	}
-	// 	printf("----------\n");
-	// }
-
 	for (j = 0; j < size; j++)
 	{
-		//printf("%x %x\n", event[j], reference[j]);
 		if (event[j] != reference[j])
 		{
-			//printf("diff %x %x %d\n", event[j], reference[j], j);
 			return -1;
 		}
 	}
-
 	return BLE_OK;
 }
 
@@ -434,12 +417,12 @@ void sendCommand(uint8_t * command, int size)
 		//wait until it is possible to write
 		//while(!dataAvailable);
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
-		int j;
-		for(j=0;j<5;j++)
-		{
-			printf("%x ",slave_header[j]);
-		}
-		printf(" 3\n");
+		// int j;
+		// for(j=0;j<5;j++)
+		// {
+		// 	printf("%x ",slave_header[j]);
+		// }
+		// printf(" 3\n");
 		int bufferSize = (slave_header[2] << 8 | slave_header[1]);
 		if (bufferSize >= size)
 		{
@@ -468,7 +451,7 @@ void catchBLE(uint8_t * byte1, uint8_t * byte2)
 		if (checkEventResp(buffer, EVENT_DISCONNECTED, 3) == BLE_OK)
 		{
 			printf("disconnect\n");
-			//setConnectable();
+			setConnectable();
 		}
 		if (checkEventResp(buffer, EVENT_CONNECTED, 5) == BLE_OK)
 		{
@@ -531,6 +514,7 @@ void setConnectable()
 	free(discoverableCommand);
 	free(localname);
 	dwt_delay_ms(10);
+	printf("set connect\n");
 }
 
 /**
@@ -639,10 +623,10 @@ void addCharacteristic(uint8_t * UUID, uint8_t * handleChar, uint8_t * handleSer
 	{
 		handleChar[0] = rxEvent[7];
 		handleChar[1] = rxEvent[8];
-		printf("work %x %x\n", rxEvent[7], rxEvent[8]);
+		//printf("work %x %x\n", rxEvent[7], rxEvent[8]);
 	}
 	else
-		printf("fail\n");
+		//printf("fail\n");
 	free(rxEvent);
 }
 
@@ -661,9 +645,8 @@ void updateCharValue(uint8_t * handleService, uint8_t * handleChar, int offset, 
 	memcpy(commandComplete, UPDATE_CHAR, 10);
 	memcpy(commandComplete + 10, data, size);
 
-	printf("%x\n",commandComplete[1]);
 	BLE_command(commandComplete, 10 + size, ADD_CUSTOM_CHAR_COMPLETE, sizeof(ADD_CUSTOM_CHAR_COMPLETE), 0);
-
+	
 	free(commandComplete);
 	free(rxEvent);
 }
@@ -685,12 +668,15 @@ void disconnectBLE()
 	command[6] = 0x13;
 	if (BLE_command(command, sizeof(command), EVENT_DISCONNECT_PENDING, 7, 0) == BLE_OK)
 	{
+		printf("pend\n");
 		int result = fetchBleEvent(buffer, 127);
 		if (result == BLE_OK)
 		{
+			printf("dis bleok\n");
 			if (checkEventResp(buffer, EVENT_DISCONNECTED, 4) == BLE_OK)
 			{
-				//setConnectable();
+				printf("dis bleok conect\n");
+				setConnectable();
 				connectionHandler[0] = -1;
 				connectionHandler[1] = -1;
 			}
@@ -708,14 +694,22 @@ void setDiscoverability(uint8_t mode)
 {
 	if (mode == 1)
 	{
+		printf("discover\n");
+		is_disoverable = 1;
 		setConnectable();
 	}
 	else if (mode == 0)
 	{
 		if (BLE_command(ACI_GAP_SET_NON_DISCOVERABLE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE), ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE), 0) == BLE_OK)
 		{
+			printf("non_discover\n");
+			is_disoverable = 0;
+			free(rxEvent);
 		}
-		free(rxEvent);
+		else
+		{
+			printf("fail\n");
+		}
 	}
 	else
 	{

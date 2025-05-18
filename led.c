@@ -29,15 +29,25 @@ void led_init(void)
 
 void leds_set(uint8_t led)
 {
-	if(led & 0x01)
-		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_RED, 1);
-	else
-		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_RED, 0);
+	// if(led & 0x01)
+	// 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_RED, 1);
+	// else
+	// 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_RED, 0);
 	
-	if((led>>0) & 0x10)
+	// if((led>>0) & 0x10)
+	// 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 1);
+	// else
+	// 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+	if(led)
+	{
+		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_RED, 0);
 		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 1);
+	}
 	else
+	{
+		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_RED, 1);
 		GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+	}
 }
 
 void led_on(uint8_t led)
