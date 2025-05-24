@@ -7,7 +7,7 @@
 
 #define SYSTICK_TIM_CLK   	16000000UL //16MHz
 #define LED_PERIOD_MS	  	50	//50
-#define ONE_MIN_CNT	 	  	20  //10*(1000/LED_PERIOD_MS)
+#define ONE_MIN_CNT	 	  	200  //10*(1000/LED_PERIOD_MS)
 #define IRQNO_TIMER5  	  	50
 #define TEN_SEC			  	3000 //10000
 #define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
@@ -105,7 +105,7 @@ uint32_t *pNVIC_ISPR1 = (uint32_t*)0XE000E204;
 volatile uint8_t start_cnt = 0;
 volatile uint8_t id_cnt = 0;
 volatile int8_t start_flag = 0;
-volatile int8_t one_min_cnt = ONE_MIN_CNT;
+volatile uint32_t one_min_cnt = ONE_MIN_CNT;
 int dataAvailable = 0;
 volatile uint8_t is_disoverable = 1;
 
@@ -159,8 +159,8 @@ uint8_t Read_movement(void)
 #if READ_Z_AXIS
 	res_z = twos_complement_to_signed(z, 16);
 #endif
-	if(res_x > LED_TH_X || res_x  < -LED_TH_X
-		|| res_y > LED_TH_Y || res_y  < -LED_TH_Y
+	if(res_x > (1<<12) || res_x  < -(1<<12)
+		|| res_y > (1<<12) || res_y  < -(1<<12)
 #if READ_Z_AXIS
 		|| res_z > LED_TH_Z || res_z  < -LED_TH_Z
 #endif
@@ -192,35 +192,21 @@ int main(void)
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
 
+	// setDiscoverability(0);
+	// dwt_delay_ms(10000);
+	// setDiscoverability(1);
+	// return 0;
+
+
 	TIM5_init();
     // /* Manually trigger TIM5 interrupt */
-    //*pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
 
 	uint8_t nonDiscoverable = 0;
-	// while (1)
-	// {
-	// 	//printf("%d %d\n",connectionHandler[0],connectionHandler[1]);
-	// 	dwt_delay_ms(60);
-	// 	if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT,BLE_INT_Pin))
-	// 	{
-	// 		catchBLE();
-	// 	}
-	// 	else
-	// 	{
-	// 		//printf("2\n");
-	// 		dwt_delay_ms(1000);
-	// 		unsigned char test_str[] = "BLE test";
-	// 		updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str) - 1, test_str);
-	// 		if (!(connectionHandler[0] == -1 && connectionHandler[1] == -1))
-	// 		{
-	// 			dwt_delay_ms(3000);
-	// 			disconnectBLE();
-	// 		}
-	// 	}
-	// }
-	// return 0;
+	//uint64_t test=100000;
 	while(1)
 	{
+		//if(test) test--;
+		//if(test)
 		if(one_min_cnt)
 		{
 			if(is_disoverable)
@@ -289,26 +275,8 @@ void TIM5_IRQHandler(void)
 		//printf("irq\n");
 		//printf("irq cnt=%d\n",one_min_cnt);
 	}
-	else
-	{
-		// if(start_flag == 0)
-		// {
-		// 	leds_set(start_frame[start_cnt++]);
-		// 	if(start_cnt == 4) start_flag = 1;
-		// }
-		// else if(start_flag == 1)
-		// {
-		// 	leds_set(student_id[id_cnt++]);
-		// 	if(id_cnt == 8)
-		// 	{
-		// 		start_flag = -1;
-		// 	} 
-		// }
-		// // else
-		// // 	one_min_cnt = ONE_MIN_CNT;
-	}
 	TIM_IRQHandling(&Timer5_Handle);
- 	//Timer5_Handle.pTIMx->SR &= ~(1<<0);
+ 	// Timer5_Handle.pTIMx->SR &= ~(1<<0);
 }
 
 void EXTI9_5_IRQHandler(void)
@@ -316,105 +284,9 @@ void EXTI9_5_IRQHandler(void)
 	dataAvailable=1;
 	GPIO_IRQHandling(BLE_INT_Pin); //clear the pending event from exti line
 }
-// #if I2C_INT_ENABLE
-// void I2C1_EV_IRQHandler(void)
-// {
-//     //printf("i2c1 ev\n");
-// 	//printf("Handler %d\n",*(g_ds1307I2CHandle.pTxBuffer));
-//     I2C_EV_IRQHandling(&g_ds1307I2CHandle);
-// }
-
-// void I2C1_ER_IRQHandler(void)
-// {
-//     //printf("i2c1 er\n");
-//     I2C_ER_IRQHandling(&g_ds1307I2CHandle);
-// }
 
 void I2C_ApplicationEventCallback(I2C_Handle_t *pI2CHandle,uint8_t AppEv)
 {
-
-    if(AppEv == I2C_EV_TX_CMPLT)
-    {
-        //printf("Tx is complete\n");
-		pI2CHandle->TxRxComplt = SET;
-    }
-    else if(AppEv == I2C_EV_RX_CMPLT)
-    {
-        //printf("Rx is complete\n");
-        pI2CHandle->TxRxComplt = SET;
-    }
-    else if(AppEv == I2C_ERROR_AF)
-    {
-        printf("Error: Ack failure\n");
-
-        // in master ack failure happens when slave fails to send ack for the byte
-        // sent from master
-        I2C_CloseSendData(pI2CHandle);
-
-        // /generate stop condition to release bus
-        I2C_GenerateStopCondition(I2C1);
-
-        //Hang in infinite loop
-        while(1);
-    }
-    else if(AppEv == I2C_ERROR_BERR)
-    {
-        printf("Error: bus error\n");
-    }
-    else if(AppEv == I2C_ERROR_ARLO)
-    {
-        printf("Error: arb error\n");
-    }
-    else if(AppEv == I2C_ERROR_OVR)
-    {
-        printf("Error: overrun error\n");
-    }
-    else if(AppEv == I2C_ERROR_TIMEOUT)
-    {
-        printf("Error: timeout error\n");
-    }
-
+	return;
 }
 // #endif
-
-#if ENABLE_SysTick
-void SysTick_Handler(void)
-{
-	RTC_time_t current_time;
-	RTC_date_t current_date;
-
-	ds1307_get_current_time(&current_time);
-
-	char *am_pm;
-	if(current_time.time_format != TIME_FORMAT_24HRS){
-		am_pm = (current_time.time_format) ? "PM" : "AM";
-#ifndef PRINT_LCD
-		printf("Current time = %s %s\n",time_to_string(&current_time),am_pm); // 04:25:41 PM
-#else
-		lcd_set_cursor(1, 1);
-		lcd_print_string(time_to_string(&current_time));
-		lcd_print_string(am_pm);
-#endif
-
-	}else{
-#ifndef PRINT_LCD
-		printf("Current time = %s\n",time_to_string(&current_time)); // 04:25:41
-#else
-		lcd_set_cursor(1, 1);
-		lcd_print_string(time_to_string(&current_time));
-#endif
-	}
-
-	ds1307_get_current_date(&current_date);
-
-#ifndef PRINT_LCD
-	printf("Current date = %s <%s>\n",date_to_string(&current_date), get_day_of_week(current_date.day));
-#else
-	lcd_set_cursor(2, 1);
-	lcd_print_string(date_to_string(&current_date));
-	lcd_print_char('<');
-	lcd_print_string(get_day_of_week(current_date.day));
-	lcd_print_char('>');
-#endif
-}
-#endif

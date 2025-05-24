@@ -87,7 +87,8 @@ uint8_t ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE[] = {0x04, 0x0E, 0x04, 0x01, 0x81,
 extern int dataAvailable;
 extern uint8_t is_disoverable;
 extern void dwt_delay_ms(uint32_t ms);
-
+uint32_t *pNVIC_ISPR0 = (uint32_t*)0XE000E200;
+#define EXTI9_5 23
 // Device name sent in BLE advertisement packets
 uint8_t deviceName[] = {'P', 'r', 'i', 'v', 'T', 'a', 'g'};
 
@@ -144,7 +145,7 @@ void ble_gpio_init()
 	BLE.GPIO_PinConfig.GPIO_PinNumber = BLE_INT_Pin;
 	GPIO_Init(&BLE);
 
-	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI0);
+	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI10);
 	GPIO_IRQInterruptConfig(IRQ_NO_EXTI9_5, ENABLE);
 
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
@@ -495,13 +496,24 @@ void setConnectable()
 
 	sendCommand(discoverableCommand, sizeof(deviceName) + 5 + sizeof(ACI_GAP_SET_DISCOVERABLE));
 	rxEvent = (uint8_t *)malloc(7);
-	while (!dataAvailable);
+	//int time_cnt = 0;
+	while (!dataAvailable)
+	{	
+		// time_cnt++;
+		// if(time_cnt > 500)
+		// {
+		// 	time_cnt = 0;
+		// 	*pNVIC_ISPR0 |= (1 << (EXTI9_5 % 32));
+		// }	
+	
+	}
 	res = fetchBleEvent(rxEvent, 7);
 	if (res == BLE_OK)
 	{
 		res = checkEventResp(rxEvent, ACI_GAP_SET_DISCOVERABLE_COMPLETE, 7);
 		if (res == BLE_OK)
 		{
+			printf("connect\n");
 			stackInitCompleteFlag |= 0x80;
 		}
 	}
@@ -701,7 +713,6 @@ void setDiscoverability(uint8_t mode)
 		{
 			printf("non_discover\n");
 			is_disoverable = 0;
-			
 		}
 		else
 		{
