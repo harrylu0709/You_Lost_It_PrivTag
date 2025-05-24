@@ -75,6 +75,8 @@ uint8_t DISCONNECT[] = {0x01, 0x06, 0x04, 0x03}; // TODO - fill this in
 uint8_t EVENT_DISCONNECTED[] = {0x04, 0x05, 0x04, 0x00};
 uint8_t EVENT_DISCONNECT_PENDING[] = {0x04, 0x0F, 0x04, 0x00, 0x01, 0x06, 0x04};
 
+//uint8_t EVENT_DISCONNECT_PENDING[] = {0x04, 0x05, 0x04, 0x00, 0x01, 0x08, 0x16};
+
 //uint8_t EVENT_CONNECTED[] = {0x04,0x3E,0x13,0x01,0x00,0x01,0x08};
 uint8_t EVENT_CONNECTED[] = {0x04, 0x3E, 0x13, 0x01, 0x00};
 uint8_t EVENT_GATT_CHANGED[] = {0x04, 0xFF, 0x0B, 0x01, 0x0C};
@@ -160,12 +162,6 @@ void SPI2_GPIOInits(void)
 	SPIPins.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	SPIPins.GPIO_PinConfig.GPIO_PinSpeed = GPOI_SPEED_HIGH;
 
-
-
-
-
-	
-
 	SPIPins.GPIO_PinConfig.GPIO_PinNumber = SPI2_SCK;
 	GPIO_Init(&SPIPins);
 
@@ -185,7 +181,7 @@ void SPI2_Inits(void)
 	SPI2Handle.pSPIx = SPI2;
 	SPI2Handle.SPIConfig.SPI_BusConfig = SPI_BUS_CONFIG_FD;
 	SPI2Handle.SPIConfig.SPI_DeviceMode = SPI_DEVICE_MODE_MASTER;
-	SPI2Handle.SPIConfig.SPI_SclkSpeed = SPI_SCLK_SPEED_DIV4;    //generate 2MHz
+	SPI2Handle.SPIConfig.SPI_SclkSpeed = SPI_SCLK_SPEED_DIV2;    //generate 8MHz
 	SPI2Handle.SPIConfig.SPI_DFF = SPI_DFF_8BITS;
 	SPI2Handle.SPIConfig.SPI_CPOL = SPI_CPOL_LOW;
 	SPI2Handle.SPIConfig.SPI_CPHA = SPI_CPHA_LOW;
@@ -206,7 +202,7 @@ void xnucleo_init()
 
 void ble_init()
 {
-	//printf("ble init\n");
+	printf("ble init\n");
 	//fetching the reset event
 	rxEvent = (uint8_t *)malloc(EVENT_STARTUP_SIZE);
 	int res;
@@ -446,30 +442,30 @@ void catchBLE(uint8_t * byte1, uint8_t * byte2)
 	int result = fetchBleEvent(buffer, 127);
 	if (result == BLE_OK)
 	{
-		flag = 1;
-		printf("ok\n");
+		//printf("%x %x %x %x %x\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
 		if (checkEventResp(buffer, EVENT_DISCONNECTED, 3) == BLE_OK)
 		{
-			printf("disconnect\n");
-			setConnectable();
+			//printf("disconnect\n");
+			//setConnectable();
 		}
 		if (checkEventResp(buffer, EVENT_CONNECTED, 5) == BLE_OK)
 		{
-			printf("connect\n");
+			//printf("connect\n");
 			// Little Endian Format
 			*(connectionHandler) = buffer[5];
 			*(connectionHandler + 1) = buffer[6];
 		}
 		if (checkEventResp(buffer, EVENT_GATT_CHANGED, 5) == BLE_OK)
 		{
-			printf("gatt\n");
+			//printf("gatt\n");
 			*(connectionHandler) = buffer[5];
 			*(connectionHandler + 1) = buffer[6];
+			GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_ORANGE, 1);
 		}
 	}
 	else
 	{
-		printf("fail\n");
+		//printf("fail\n");
 		//something bad is happening if I am here
 	}
 }
@@ -514,7 +510,6 @@ void setConnectable()
 	free(discoverableCommand);
 	free(localname);
 	dwt_delay_ms(10);
-	printf("set connect\n");
 }
 
 /**
@@ -564,23 +559,25 @@ int BLE_command(uint8_t * command, int size, uint8_t * result, int sizeRes, int 
 	dwt_delay_ms(10);
 	if (response != BLE_OK)
 	{
-		// int j;
-		// for(j=0;j<sizeRes;j++){
-		// 	printf("0x%02X 0x%02X\n", rxEvent[j], result[j]);
-		// 	 if(rxEvent[j]!=result[j])
-		// 	 {
-		// 		printf("diff 0x%02X 0x%02X %d\n", rxEvent[j], result[j], j);
-		// 		//break;
-		// 	 }
-		//  }
+#if 0
+		int j;
+		for(j=0;j<sizeRes;j++){
+			printf("0x%02X 0x%02X\n", rxEvent[j], result[j]);
+			 if(rxEvent[j]!=result[j])
+			 {
+				printf("diff 0x%02X 0x%02X %d\n", rxEvent[j], result[j], j);
+				//break;
+			 }
+		 }
 
 
-		// printf("s=%d ",size);
-		// for(j= 0; j<size;j++)
-		// 	printf("0x%02X ",command[j]);
-		// {
-		// }
-		// printf("\n");
+		printf("s=%d ",size);
+		for(j= 0; j<size;j++)
+			printf("0x%02X ",command[j]);
+		{
+		}
+		printf("\n");
+#endif
 	}
 	// if(response==BLE_OK && size == 16) HAL_GPIO_WritePin(GPIOD,LD6_Pin,GPIO_PIN_SET);
 	return response;
@@ -666,25 +663,25 @@ void disconnectBLE()
 	command[4] = connectionHandler[0];
 	command[5] = connectionHandler[1];
 	command[6] = 0x13;
+	int result = 1;
 	if (BLE_command(command, sizeof(command), EVENT_DISCONNECT_PENDING, 7, 0) == BLE_OK)
 	{
-		printf("pend\n");
-		int result = fetchBleEvent(buffer, 127);
+		dwt_delay_ms(50);
+		result = fetchBleEvent(buffer, 127);
 		if (result == BLE_OK)
 		{
-			printf("dis bleok\n");
 			if (checkEventResp(buffer, EVENT_DISCONNECTED, 4) == BLE_OK)
 			{
-				printf("dis bleok conect\n");
 				setConnectable();
 				connectionHandler[0] = -1;
 				connectionHandler[1] = -1;
+				GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_ORANGE, 0);
 			}
 		}
 		free(rxEvent);
 	}
+	printf("%d %d\n",connectionHandler[0],connectionHandler[1]);
 }
-
 /**
  * DO NOT CHANGE FUNCTION definition
  * @brief Sets the discoverability of the peripheral
@@ -694,9 +691,9 @@ void setDiscoverability(uint8_t mode)
 {
 	if (mode == 1)
 	{
-		printf("discover\n");
 		is_disoverable = 1;
 		setConnectable();
+		printf("discover\n");
 	}
 	else if (mode == 0)
 	{
@@ -704,12 +701,13 @@ void setDiscoverability(uint8_t mode)
 		{
 			printf("non_discover\n");
 			is_disoverable = 0;
-			free(rxEvent);
+			
 		}
 		else
 		{
-			printf("fail\n");
+			printf("fail non cover\n");
 		}
+		free(rxEvent);
 	}
 	else
 	{

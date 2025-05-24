@@ -30,8 +30,8 @@
 #define 	ADD_REG_OUT_Z_L		0x2C
 #define 	ADD_REG_OUT_Z_H		0x2D
 
-#define 	LED_TH_X			(1<<11)
-#define 	LED_TH_Y			(1<<11)
+#define 	LED_TH_X			(1<<12)
+#define 	LED_TH_Y			(1<<12)
 #define 	LED_TH_Z			18000
 
 void SPI1_GPIOInits(void);

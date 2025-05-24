@@ -6,16 +6,17 @@
 #include "ble.h"
 
 #define SYSTICK_TIM_CLK   	16000000UL //16MHz
-#define LED_PERIOD_MS	  	50
-#define ONE_MIN_CNT	 	  	10
+#define LED_PERIOD_MS	  	1000	//50
+#define ONE_MIN_CNT	 	  	5 //10*(1000/LED_PERIOD_MS)
 #define IRQNO_TIMER5  	  	50
 #define TEN_SEC			  	3000 //10000
 #define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
 #define DWT_CYCCNT  		(*(volatile uint32_t*)0xE0001004)
 #define DEMCR       		(*(volatile uint32_t*)0xE000EDFC)
+#define READ_Z_AXIS			0
 extern I2C_Handle_t g_ds1307I2CHandle;
 TIM_Handle_t Timer5_Handle;
-
+extern int16_t connectionHandler[2];
 /*
  * Embedded Systems Programming on ARM Cortex-M3/M4 Processor lecture 79
 
@@ -91,19 +92,31 @@ void dwt_delay_us(uint32_t us)
 
 void dwt_delay_ms(uint32_t ms) 
 {
-    while (ms--) {
+    while (ms--) 
+	{
         dwt_delay_us(1000);
     }
 }
 
+void turn_off_timer5(uint8_t mode)
+{
+	if(mode)
+	{
+		Timer5_Handle.pTIMx->DIER &= ~(1<<0);	
+	}
+	else
+	{
+		Timer5_Handle.pTIMx->DIER |= (1<<0);
+	}
+}
 
 //semihosting init function
 extern void initialise_monitor_handles(void);
 uint32_t *pNVIC_ISPR1 = (uint32_t*)0XE000E204;
 volatile uint8_t start_cnt = 0;
 volatile uint8_t id_cnt = 0;
-volatile int8_t start_flag = 0;
-volatile int8_t one_min_cnt = ONE_MIN_CNT;
+volatile uint8_t start_flag = 0;
+volatile uint32_t one_min_cnt = ONE_MIN_CNT;
 int dataAvailable = 0;
 volatile uint8_t is_disoverable = 1;
 
@@ -136,7 +149,8 @@ monitor resume
 
 int twos_complement_to_signed(int value, int bitWidth) 
 {
-    if (value & (1U << (bitWidth - 1))) {
+    if (value & (1U << (bitWidth - 1))) 
+	{
         // Negative number
         value |= ~((1U << bitWidth) - 1);  // Sign-extend the value
     }
@@ -147,14 +161,21 @@ uint8_t Read_movement(void)
 {
 	int res_x;
 	int res_y;
+#if READ_Z_AXIS
 	int res_z;
+#endif
 	LIS3DSH_read_xyz(&x, &y, &z);
 	res_x = twos_complement_to_signed(x, 16);
 	res_y = twos_complement_to_signed(y, 16);
+#if READ_Z_AXIS
 	res_z = twos_complement_to_signed(z, 16);
-	if(	   res_x > LED_TH_X || res_x  < -LED_TH_X\
-		|| res_y > LED_TH_Y || res_y  < -LED_TH_Y\
-		/*|| res_z > LED_TH_Z || res_z  < -LED_TH_Z*/)
+#endif
+	if(res_x > LED_TH_X || res_x  < -LED_TH_X
+		|| res_y > LED_TH_Y || res_y  < -LED_TH_Y
+#if READ_Z_AXIS
+		|| res_z > LED_TH_Z || res_z  < -LED_TH_Z
+#endif
+	  )
 	{
 		one_min_cnt = ONE_MIN_CNT;
 		return 1;
@@ -179,59 +200,85 @@ int main(void)
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_SET);
 
 	ble_init();
-	printf("ble_init finish\n");
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
+
 	TIM5_init();
     // /* Manually trigger TIM5 interrupt */
-    *pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
-	
+    //*pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
+
+	uint8_t nonDiscoverable = 0;
+	// while (1)
+	// {
+	// 	//printf("%d %d\n",connectionHandler[0],connectionHandler[1]);
+	// 	dwt_delay_ms(60);
+	// 	if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT,BLE_INT_Pin))
+	// 	{
+	// 		catchBLE();
+	// 	}
+	// 	else
+	// 	{
+	// 		//printf("2\n");
+	// 		dwt_delay_ms(1000);
+	// 		unsigned char test_str[] = "BLE test";
+	// 		updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str) - 1, test_str);
+	// 		if (!(connectionHandler[0] == -1 && connectionHandler[1] == -1))
+	// 		{
+	// 			dwt_delay_ms(3000);
+	// 			disconnectBLE();
+	// 		}
+	// 	}
+	// }
+	// return 0;
+
 	while(1)
 	{
-		uint8_t nonDiscoverable = 0;
-		if(one_min_cnt)
+		printf("%ld\n",one_min_cnt);
+		if(one_min_cnt > 0)
 		{
 			if(is_disoverable)
 			{
-				setDiscoverability(nonDiscoverable);
-				leds_set(nonDiscoverable);
+				setDiscoverability(0);
+				leds_set(0);
 			} 
-			printf("one_min_cnt=%d dis=%d\n",one_min_cnt,is_disoverable);
 			Read_movement();
 		}
 		else
 		{
-			//printf("2\n");
-			if(!is_disoverable)
+			dwt_delay_ms(80);
+			if(is_disoverable == 0)
 			{
-				setDiscoverability(!nonDiscoverable);
-				leds_set(!nonDiscoverable);
+				printf("is %d\n",is_disoverable);
+				setDiscoverability(1);
+				leds_set(1);
 			}	
 			if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT,BLE_INT_Pin))
 			{
-				//printf("3\n");
 				catchBLE();
 			}
 			else
 			{
-				//printf("4\n");
-				int i = TEN_SEC;				
+				int i = TEN_SEC;
+				int move_flag = 1;				
 				while (i--) 
 				{
-        			dwt_delay_us(1000);
+					dwt_delay_ms(1);
 					if(Read_movement())
 					{
 						lost_cnt_sec = 0;
 						disconnectBLE();
+						move_flag = 0;
 						break;
 					}
     			}
-				lost_cnt_sec += (TEN_SEC/1000);
-				unsigned char test_str[] = "lost for    sec";
-				test_str[9] = (lost_cnt_sec / 10) +'0';
-				test_str[10] = (lost_cnt_sec % 10)+'0';
-				updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);
-
+				if(move_flag)
+				{
+					lost_cnt_sec += (TEN_SEC/1000);
+					unsigned char test_str[] = "lost for    sec";
+					test_str[9] = (lost_cnt_sec / 10) +'0';
+					test_str[10] = (lost_cnt_sec % 10)+'0';
+					updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);	
+				}
 				// dwt_delay_ms(10000);
 				// unsigned char test_str[] = "youlostit BLE test";
 				// Send a string to the NORDIC UART service, remember to not include the newline
@@ -249,9 +296,12 @@ int main(void)
 
 void TIM5_IRQHandler(void)
 {
+	//one_min_cnt--;
 	if(one_min_cnt > 0)
 	{
 		one_min_cnt--;
+		//printf("irq\n");
+		//printf("irq cnt=%d\n",one_min_cnt);
 	}
 	else
 	{
@@ -271,7 +321,11 @@ void TIM5_IRQHandler(void)
 		// // else
 		// // 	one_min_cnt = ONE_MIN_CNT;
 	}
-	TIM_IRQHandling(&Timer5_Handle);
+	if(Timer5_Handle.pTIMx->SR & 0x1)
+	{
+		start_flag = 1;
+		TIM_IRQHandling(&Timer5_Handle);
+	}	
  	//Timer5_Handle.pTIMx->SR &= ~(1<<0);
 }
 
