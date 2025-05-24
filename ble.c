@@ -144,7 +144,7 @@ void ble_gpio_init()
 	BLE.GPIO_PinConfig.GPIO_PinNumber = BLE_INT_Pin;
 	GPIO_Init(&BLE);
 
-	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI15);
+	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI0);
 	GPIO_IRQInterruptConfig(IRQ_NO_EXTI9_5, ENABLE);
 
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);

@@ -6,8 +6,8 @@
 #include "ble.h"
 
 #define SYSTICK_TIM_CLK   	16000000UL //16MHz
-#define LED_PERIOD_MS	  	1000	//50
-#define ONE_MIN_CNT	 	  	5 //10*(1000/LED_PERIOD_MS)
+#define LED_PERIOD_MS	  	50	//50
+#define ONE_MIN_CNT	 	  	20  //10*(1000/LED_PERIOD_MS)
 #define IRQNO_TIMER5  	  	50
 #define TEN_SEC			  	3000 //10000
 #define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
@@ -98,25 +98,14 @@ void dwt_delay_ms(uint32_t ms)
     }
 }
 
-void turn_off_timer5(uint8_t mode)
-{
-	if(mode)
-	{
-		Timer5_Handle.pTIMx->DIER &= ~(1<<0);	
-	}
-	else
-	{
-		Timer5_Handle.pTIMx->DIER |= (1<<0);
-	}
-}
 
 //semihosting init function
 extern void initialise_monitor_handles(void);
 uint32_t *pNVIC_ISPR1 = (uint32_t*)0XE000E204;
 volatile uint8_t start_cnt = 0;
 volatile uint8_t id_cnt = 0;
-volatile uint8_t start_flag = 0;
-volatile uint32_t one_min_cnt = ONE_MIN_CNT;
+volatile int8_t start_flag = 0;
+volatile int8_t one_min_cnt = ONE_MIN_CNT;
 int dataAvailable = 0;
 volatile uint8_t is_disoverable = 1;
 
@@ -230,14 +219,13 @@ int main(void)
 	// 	}
 	// }
 	// return 0;
-
 	while(1)
 	{
-		printf("%ld\n",one_min_cnt);
-		if(one_min_cnt > 0)
+		if(one_min_cnt)
 		{
 			if(is_disoverable)
 			{
+				//dwt_delay_ms(10);
 				setDiscoverability(0);
 				leds_set(0);
 			} 
@@ -246,9 +234,8 @@ int main(void)
 		else
 		{
 			dwt_delay_ms(80);
-			if(is_disoverable == 0)
+			if(!is_disoverable)
 			{
-				printf("is %d\n",is_disoverable);
 				setDiscoverability(1);
 				leds_set(1);
 			}	
@@ -296,7 +283,6 @@ int main(void)
 
 void TIM5_IRQHandler(void)
 {
-	//one_min_cnt--;
 	if(one_min_cnt > 0)
 	{
 		one_min_cnt--;
@@ -321,11 +307,7 @@ void TIM5_IRQHandler(void)
 		// // else
 		// // 	one_min_cnt = ONE_MIN_CNT;
 	}
-	if(Timer5_Handle.pTIMx->SR & 0x1)
-	{
-		start_flag = 1;
-		TIM_IRQHandling(&Timer5_Handle);
-	}	
+	TIM_IRQHandling(&Timer5_Handle);
  	//Timer5_Handle.pTIMx->SR &= ~(1<<0);
 }
 
