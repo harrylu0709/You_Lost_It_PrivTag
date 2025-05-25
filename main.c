@@ -64,7 +64,7 @@ volatile uint8_t id_cnt = 0;
 volatile int8_t start_flag = 0;
 volatile uint32_t one_min_cnt = ONE_MIN_CNT;
 int dataAvailable = 0;
-volatile uint8_t is_disoverable = 1;
+volatile uint8_t is_discoverable = 1;
 
 uint8_t start_frame[4]= {0x10, 0x01, 0x10, 0x01};
 uint8_t student_id[8]= {0x00, 0x01, 0x01, 0x01, 0x10, 0x11, 0x00, 0x11}; //ID is 5555
@@ -165,7 +165,7 @@ int main(void)
 		else
 		{
 			dwt_delay_ms(80);
-			if(!is_disoverable)
+			if(!is_discoverable)
 			{
 				setDiscoverability(1);
 				leds_set(1);

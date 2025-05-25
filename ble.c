@@ -76,7 +76,7 @@ uint8_t ACI_GAP_SET_NON_DISCOVERABLE[] = {0x01, 0x81, 0xFC, 0x00}; // TODO - fil
 uint8_t ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE[] = {0x04, 0x0E, 0x04, 0x01, 0x81, 0xFC, 0x00}; // TODO - fill this in
 
 extern int dataAvailable;
-extern uint8_t is_disoverable;
+extern uint8_t is_discoverable;
 extern void dwt_delay_ms(uint32_t ms);
 uint32_t *pNVIC_ISPR0 = (uint32_t*)0xE000E200;
 
@@ -465,16 +465,8 @@ void setConnectable()
 
 	sendCommand(discoverableCommand, sizeof(deviceName) + 5 + sizeof(ACI_GAP_SET_DISCOVERABLE));
 	rxEvent = (uint8_t *)malloc(7);
-	//int time_cnt = 0;
-	while (!dataAvailable)
-	{	
-		// time_cnt++;
-		// if(time_cnt > 500)
-		// {
-		// 	time_cnt = 0;
-		// 	*pNVIC_ISPR0 |= (1 << (EXTI9_5 % 32));
-		// }	
-	}
+	uint32_t timeout = 1000000; // example large count
+	while (!dataAvailable && timeout--) ;
 	res = fetchBleEvent(rxEvent, 7);
 	if (res == BLE_OK)
 	{
@@ -482,6 +474,7 @@ void setConnectable()
 		if (res == BLE_OK)
 		{
 			//printf("connect\n");
+			GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 1);
 			stackInitCompleteFlag |= 0x80;
 		}
 	}
@@ -649,6 +642,7 @@ void disconnectBLE()
 				connectionHandler[0] = -1;
 				connectionHandler[1] = -1;
 				GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_ORANGE, 0);
+				GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
 			}
 		}
 		free(rxEvent);
@@ -664,7 +658,8 @@ void setDiscoverability(uint8_t mode)
 {
 	if (mode == 1)
 	{
-		is_disoverable = 1;
+
+		is_discoverable = 1;
 		setConnectable();
 		//printf("discover\n");
 	}
@@ -673,7 +668,7 @@ void setDiscoverability(uint8_t mode)
 		if (BLE_command(ACI_GAP_SET_NON_DISCOVERABLE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE), ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE), 0) == BLE_OK)
 		{
 			//printf("non_discover\n");
-			is_disoverable = 0;
+			is_discoverable = 0;
 		}
 		else
 		{
