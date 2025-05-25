@@ -664,7 +664,7 @@ void setDiscoverability(uint8_t mode)
 {
 	if (mode == 1)
 	{
-		//is_disoverable = 1;
+		is_disoverable = 1;
 		setConnectable();
 		//printf("discover\n");
 	}
@@ -673,7 +673,7 @@ void setDiscoverability(uint8_t mode)
 		if (BLE_command(ACI_GAP_SET_NON_DISCOVERABLE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE), ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE), 0) == BLE_OK)
 		{
 			//printf("non_discover\n");
-			//is_disoverable = 0;
+			is_disoverable = 0;
 		}
 		else
 		{

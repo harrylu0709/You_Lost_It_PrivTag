@@ -6,8 +6,8 @@
 #include "ble.h"
 
 #define SYSTICK_TIM_CLK   	16000000UL //16MHz
-#define LED_PERIOD_MS	  	50	//50
-#define ONE_MIN_CNT	 	  	200  //10*(1000/LED_PERIOD_MS)
+#define LED_PERIOD_MS	  	500	//50
+#define ONE_MIN_CNT	 	  	10  //10*(1000/LED_PERIOD_MS)
 #define IRQNO_TIMER5  	  	50
 #define TEN_SEC			  	3000 //10000
 #define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
@@ -116,11 +116,10 @@ uint8_t Read_movement(void)
 	res_z = twos_complement_to_signed(z, 16);
 #endif
 	
-	int acc = 8000;
-	if(res_x > acc || res_x  < -acc
-		|| res_y > acc || res_y  < -acc
+	if(res_x > ACC_TH_X || res_x  < -ACC_TH_X
+		|| res_y > ACC_TH_Y || res_y  < -ACC_TH_Y
 #if READ_Z_AXIS
-		|| res_z > LED_TH_Z || res_z  < -LED_TH_Z
+		|| res_z > ACC_TH_Z || res_z  < -ACC_TH_Z
 #endif
 	  )
 	{
@@ -134,12 +133,11 @@ int main(void)
 {
 	int lost_cnt_sec = 0;
 
-	initialise_monitor_handles();
+	//initialise_monitor_handles();
 	dwt_init();
 	LIS3DSH_init();
 	led_init();
 	
-
 	xnucleo_init();
 
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_RESET);
@@ -152,6 +150,7 @@ int main(void)
 
 	TIM5_init();
     // /* Manually trigger TIM5 interrupt */
+	//*pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
 
 	uint8_t nonDiscoverable = 0;
 
@@ -159,11 +158,7 @@ int main(void)
 	{
 		if(one_min_cnt)
 		{
-			if(is_disoverable)
-			{
-				setDiscoverability(0);
-				leds_set(0);
-			} 
+			setDiscoverability(0);
 			Read_movement();
 		}
 		else
@@ -188,8 +183,9 @@ int main(void)
 					if(Read_movement())
 					{
 						lost_cnt_sec = 0;
-						disconnectBLE();
 						move_flag = 0;
+						GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+						disconnectBLE();
 						break;
 					}
     			}
@@ -201,11 +197,6 @@ int main(void)
 					test_str[10] = (lost_cnt_sec % 10)+'0';
 					updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);	
 				}
-				// dwt_delay_ms(10000);
-				// unsigned char test_str[] = "youlostit BLE test";
-				// Send a string to the NORDIC UART service, remember to not include the newline
-				//updateCharValue(NORDIC_UART_SERVICE_HANDLE, READ_CHAR_HANDLE, 0, sizeof(test_str)-1, test_str);
-				//uint8_t test_str[20] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J'};
 			}
 			// Wait for interrupt, only uncomment if low power is needed
 			//__WFI();
@@ -220,6 +211,7 @@ void TIM5_IRQHandler(void)
 	if(one_min_cnt > 0)
 	{
 		one_min_cnt--;
+		GPIO_ToggleOutputPin(LED_GPIO_PORT, LED_GPIO_RED);
 	}
 	TIM_IRQHandling(&Timer5_Handle);
  	// Timer5_Handle.pTIMx->SR &= ~(1<<0);
