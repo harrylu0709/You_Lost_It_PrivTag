@@ -22,50 +22,6 @@ extern int16_t connectionHandler[2];
 
  * Section 4.4 of Cortex -M4 Devices Generic User Guide
 */
-#if ENABLE_SysTick
-void init_systick_timer(uint32_t tick_hz)
-{
-	uint32_t *pSRVR = (uint32_t*)0xE000E014;
-	uint32_t *pSCSR = (uint32_t*)0xE000E010;
-
-    /* calculation of reload value */
-    uint32_t count_value = (SYSTICK_TIM_CLK/tick_hz)-1;// if 1 second, then tick_hz = 1, if 1 millisecond, then tick_hz = 1000
-
-    //Clear the value of SVR
-    *pSRVR &= ~(0x00FFFFFFFF);
-
-    //load the value in to SVR
-    *pSRVR |= count_value;
-
-    //do some settings
-    *pSCSR |= ( 1 << 1); //Enables SysTick exception request:
-
-    *pSCSR |= ( 1 << 2);  //Indicates the clock source, processor clock source
-
-    //enable the systick
-    *pSCSR |= ( 1 << 0); //enables the counter
-
-}
-#endif
-void close_systick_timer(void)
-{
-	uint32_t *pSRVR = (uint32_t*)0xE000E014;
-	uint32_t *pSCSR = (uint32_t*)0xE000E010;
-
-    //Clear the value of SVR
-    *pSRVR &= ~(0x00FFFFFFFF);
-
-
-    //do some settings
-    *pSCSR &= ~(0x07);
-}
-
-void Systick_PriorityConfig(uint32_t IRQPriority)
-{
-	uint32_t *pSystick_Prioirty = (uint32_t*)0xE000ED20;
-
-	*pSystick_Prioirty  |=  ( IRQPriority << 24);
-}
 
 void TIM5_init(void)
 {
@@ -101,7 +57,7 @@ void dwt_delay_ms(uint32_t ms)
 
 //semihosting init function
 extern void initialise_monitor_handles(void);
-uint32_t *pNVIC_ISPR1 = (uint32_t*)0XE000E204;
+uint32_t *pNVIC_ISPR1 = (uint32_t*)0xE000E204;
 volatile uint8_t start_cnt = 0;
 volatile uint8_t id_cnt = 0;
 volatile int8_t start_flag = 0;
@@ -159,8 +115,10 @@ uint8_t Read_movement(void)
 #if READ_Z_AXIS
 	res_z = twos_complement_to_signed(z, 16);
 #endif
-	if(res_x > (1<<12) || res_x  < -(1<<12)
-		|| res_y > (1<<12) || res_y  < -(1<<12)
+	
+	int acc = 8000;
+	if(res_x > acc || res_x  < -acc
+		|| res_y > acc || res_y  < -acc
 #if READ_Z_AXIS
 		|| res_z > LED_TH_Z || res_z  < -LED_TH_Z
 #endif
@@ -192,26 +150,17 @@ int main(void)
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
 
-	// setDiscoverability(0);
-	// dwt_delay_ms(10000);
-	// setDiscoverability(1);
-	// return 0;
-
-
 	TIM5_init();
     // /* Manually trigger TIM5 interrupt */
 
 	uint8_t nonDiscoverable = 0;
-	//uint64_t test=100000;
+
 	while(1)
 	{
-		//if(test) test--;
-		//if(test)
 		if(one_min_cnt)
 		{
 			if(is_disoverable)
 			{
-				//dwt_delay_ms(10);
 				setDiscoverability(0);
 				leds_set(0);
 			} 
@@ -262,7 +211,6 @@ int main(void)
 			//__WFI();
 		}
 	}
-	
 	return 0;
 }
 
@@ -272,8 +220,6 @@ void TIM5_IRQHandler(void)
 	if(one_min_cnt > 0)
 	{
 		one_min_cnt--;
-		//printf("irq\n");
-		//printf("irq cnt=%d\n",one_min_cnt);
 	}
 	TIM_IRQHandling(&Timer5_Handle);
  	// Timer5_Handle.pTIMx->SR &= ~(1<<0);

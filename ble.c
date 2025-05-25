@@ -10,6 +10,9 @@
 #include "ble.h"
 #include "ble_commands.h"
 #include "led.h"
+
+#define EXTI9_5 23
+
 /*
 01 0c fc 08 00 06 aa 00 00 e1 80 02
 01 8a fc 03 01 00 07
@@ -29,7 +32,6 @@ uint8_t EVENT_STATUP_DATA[] = {0x04, 0xff, 0x03, 0x01, 0x00, 0x01};
 uint8_t ACI_GATT_INIT[] = {0x01, 0x01, 0xfd, 0x00};
 uint8_t ACI_GATT_INIT_COMPLETE[] = {0x04, 0x0e, 0x04, 0x01, 0x01, 0xfd, 0x00};
 
-//uint8_t ACI_GAP_INIT[]={0x01,0x8a,0xfc,0x03,0x01,0x00,0x0d};
 uint8_t ACI_GAP_INIT[] = {0x01, 0x8a, 0xfc, 0x03, 0x01, 0x00, 0x07};
 uint8_t ACI_GAP_INIT_COMPLETE[] = {0x04, 0x0e, 0x0a, 0x01, 0x8a, 0xfc, 0x00};
 uint8_t GAP_SERVICE_HANDLE[2];
@@ -39,11 +41,9 @@ uint8_t GAP_CHAR_APP_HANDLE[2];
 uint8_t ACI_GATT_UPDATE_CHAR_VALUE[] = {0x01, 0x06, 0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 uint8_t ACI_GATT_UPDATE_CHAR_COMPLETE[] = {0x04, 0x0e, 0x04, 0x01, 0x06, 0xfd, 0x00};
 
-//uint8_t ACI_GAP_SET_AUTH[]={0x01,0x86,0xfc,0x1a,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x07,0x10,0x00,0x40,0xe2,0x01,0x00,0x00};
 uint8_t ACI_GAP_SET_AUTH[] = {0x01, 0x86, 0xfc, 0x1a, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x10, 0x00, 0x40, 0xe2, 0x01, 0x00, 0x01};
 
 uint8_t ACI_GAP_SET_AUTH_RESP[] = {0x04, 0x0e, 0x04, 0x01, 0x86, 0xfc, 0x00};
-//uint8_t ACI_GAP_SET_AUTH_RESP[]={0x04,0x0e,0x04,0x01,0x86,0xfc,0x12};
 
 uint8_t ACI_HAL_SET_TX_POWER_LEVEL[] = {0x01, 0x0f, 0xfc, 0x02, 0x01, 0x04};
 uint8_t ACI_HAL_SET_TX_POWER_LEVEL_COMPLETE[] = {0x04, 0x0e, 0x04, 0x01, 0x0f, 0xfc, 0x00};
@@ -58,16 +58,10 @@ uint8_t ACI_GAP_SET_DISCOVERABLE_COMPLETE[] = {0x04, 0x0e, 0x04, 0x01, 0x83, 0xf
 
 uint8_t ADD_PRIMARY_SERVICE[] = {0x01, 0x02, 0xFD, 0x13, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x05, 0x00, 0x01, 0x09}; //3C 60 bytes il massimo di memoria per il servizio
 uint8_t ADD_PRIMARY_SERVICE_COMPLETE[] = {0x04, 0x0e, 0x06, 0x01, 0x02, 0xFD, 0x00};
-//			14 10 00 00 10 01
 uint8_t ADD_CUSTOM_CHAR[] = {0x01, 0x04, 0xFD, 0x19, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x10, 0x01};
-//uint8_t ADD_CUSTOM_CHAR[]={0x01,0x04,0xFD,0x1A,0xff,0xff,0x02,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x50,0x05,0x00,0x14,0x00,0x00,0x00,0x01,0x10,0x01};
 
 uint8_t ADD_CUSTOM_CHAR_COMPLETE_UART[] = {0x04, 0x0e, 0x06, 0x01, 0x04, 0xFD, 0x00};
-//uint8_t ADD_CUSTOM_CHAR_COMPLETE_UART[]={0x04,0x0e,0x06,0x01,0x04,0xFD,0x00};
 uint8_t ADD_CUSTOM_CHAR_COMPLETE[] = {0x04, 0x0e, 0x04, 0x01, 0x06, 0xFD, 0x00};
-//uint8_t ADD_CUSTOM_CHAR_COMPLETE[]={0x04,0x0e,0x04,0x01,0x04,0xFD,0x00};
-
-//uint8_t ADD_CUSTOM_CHAR_COMPLETE_connect[0={0x04,0x3e,0x13,0x01,0x00,0x01,0x08};
 
 uint8_t UPDATE_CHAR[] = {0x01, 0x06, 0xFD, 0x09, 0xff, 0xff, 0xff, 0xff, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
 
@@ -75,9 +69,6 @@ uint8_t DISCONNECT[] = {0x01, 0x06, 0x04, 0x03}; // TODO - fill this in
 uint8_t EVENT_DISCONNECTED[] = {0x04, 0x05, 0x04, 0x00};
 uint8_t EVENT_DISCONNECT_PENDING[] = {0x04, 0x0F, 0x04, 0x00, 0x01, 0x06, 0x04};
 
-//uint8_t EVENT_DISCONNECT_PENDING[] = {0x04, 0x05, 0x04, 0x00, 0x01, 0x08, 0x16};
-
-//uint8_t EVENT_CONNECTED[] = {0x04,0x3E,0x13,0x01,0x00,0x01,0x08};
 uint8_t EVENT_CONNECTED[] = {0x04, 0x3E, 0x13, 0x01, 0x00};
 uint8_t EVENT_GATT_CHANGED[] = {0x04, 0xFF, 0x0B, 0x01, 0x0C};
 
@@ -87,8 +78,8 @@ uint8_t ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE[] = {0x04, 0x0E, 0x04, 0x01, 0x81,
 extern int dataAvailable;
 extern uint8_t is_disoverable;
 extern void dwt_delay_ms(uint32_t ms);
-uint32_t *pNVIC_ISPR0 = (uint32_t*)0XE000E200;
-#define EXTI9_5 23
+uint32_t *pNVIC_ISPR0 = (uint32_t*)0xE000E200;
+
 // Device name sent in BLE advertisement packets
 uint8_t deviceName[] = {'P', 'r', 'i', 'v', 'T', 'a', 'g'};
 
@@ -145,7 +136,7 @@ void ble_gpio_init()
 	BLE.GPIO_PinConfig.GPIO_PinNumber = BLE_INT_Pin;
 	GPIO_Init(&BLE);
 
-	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI10);
+	GPIO_IRQPriorityConfig(IRQ_NO_EXTI9_5, NVIC_IRQ_PRI0);
 	GPIO_IRQInterruptConfig(IRQ_NO_EXTI9_5, ENABLE);
 
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
@@ -326,14 +317,10 @@ int fetchBleEvent(uint8_t * container, int size)
 
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
 
-		// int j;
-		// for(j=0;j<5;j++)
-		// {
-		// 	printf("%x ",slave_header[j]);
-		// }
-		// printf(" 1\n");
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
+
 		dwt_delay_ms(1);
+
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
 
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
@@ -341,12 +328,7 @@ int fetchBleEvent(uint8_t * container, int size)
 		//let's get the size of data available
 		int dataSize;
 		dataSize = (slave_header[3] | slave_header[4] << 8);
-		// for(j=0;j<5;j++)
-		// {
-		// 	printf("%x ",slave_header[j]);
-		// }
-		// printf(" 2\n");
-		// printf("datasize=%d\n",dataSize);
+
 		int i;
 		char dummy = 0xff;
 
@@ -364,12 +346,10 @@ int fetchBleEvent(uint8_t * container, int size)
 
 			}
 			GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-			//SPI_PeripheralControl(SPI2, DISABLE);
 		}
 		else
 		{
 			GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-			//SPI_PeripheralControl(SPI2, DISABLE);
 			return -1;
 		}
 
@@ -399,7 +379,6 @@ int checkEventResp(uint8_t * event, uint8_t * reference, int size)
 
 void sendCommand(uint8_t * command, int size)
 {
-
 	uint8_t master_header[] = {0x0a, 0x00, 0x00, 0x00, 0x00};
 	uint8_t slave_header[5];
 
@@ -407,19 +386,12 @@ void sendCommand(uint8_t * command, int size)
 
 	do
 	{
-		
-		//SPI_PeripheralControl(SPI2, ENABLE);
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 0);
 
 		//wait until it is possible to write
 		//while(!dataAvailable);
 		SPI_TransmitReceive(SPI2, master_header, slave_header, 5, 5);
-		// int j;
-		// for(j=0;j<5;j++)
-		// {
-		// 	printf("%x ",slave_header[j]);
-		// }
-		// printf(" 3\n");
+
 		int bufferSize = (slave_header[2] << 8 | slave_header[1]);
 		if (bufferSize >= size)
 		{
@@ -431,10 +403,8 @@ void sendCommand(uint8_t * command, int size)
 			result = -1;
 		}
 		GPIO_WriteToOutputPin(BLE_GPIO_PORT, BLE_CS_Pin, 1);
-		//SPI_PeripheralControl(SPI2, DISABLE);
 		dataAvailable = 0;
 	} while (result != 0);
-
 }
 
 void catchBLE(uint8_t * byte1, uint8_t * byte2)
@@ -443,7 +413,6 @@ void catchBLE(uint8_t * byte1, uint8_t * byte2)
 	int result = fetchBleEvent(buffer, 127);
 	if (result == BLE_OK)
 	{
-		//printf("%x %x %x %x %x\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
 		if (checkEventResp(buffer, EVENT_DISCONNECTED, 3) == BLE_OK)
 		{
 			//printf("disconnect\n");
@@ -505,7 +474,6 @@ void setConnectable()
 		// 	time_cnt = 0;
 		// 	*pNVIC_ISPR0 |= (1 << (EXTI9_5 % 32));
 		// }	
-	
 	}
 	res = fetchBleEvent(rxEvent, 7);
 	if (res == BLE_OK)
@@ -513,7 +481,7 @@ void setConnectable()
 		res = checkEventResp(rxEvent, ACI_GAP_SET_DISCOVERABLE_COMPLETE, 7);
 		if (res == BLE_OK)
 		{
-			printf("connect\n");
+			//printf("connect\n");
 			stackInitCompleteFlag |= 0x80;
 		}
 	}
@@ -543,7 +511,6 @@ int BLE_command(uint8_t * command, int size, uint8_t * result, int sizeRes, int 
 {
 	int response;
 
-	//if(size == 28 && command[3] == 0x18) result[1]=0x3e;
 	sendCommand(command, size);
 	rxEvent = (uint8_t *)malloc(sizeRes + 2 * returnHandles);
 
@@ -558,11 +525,7 @@ int BLE_command(uint8_t * command, int size, uint8_t * result, int sizeRes, int 
 	}
 
 	response = fetchBleEvent(rxEvent, sizeRes + returnHandles * 2);
-	// for(i = 0; i<size;i++)
-	// {
-	// 	printf("%x ",command[i]);
-	// }
-	// printf("\n");
+
 	if (response == BLE_OK)
 	{
 		response = checkEventResp(rxEvent, result, sizeRes);
@@ -591,7 +554,6 @@ int BLE_command(uint8_t * command, int size, uint8_t * result, int sizeRes, int 
 		printf("\n");
 #endif
 	}
-	// if(response==BLE_OK && size == 16) HAL_GPIO_WritePin(GPIOD,LD6_Pin,GPIO_PIN_SET);
 	return response;
 }
 
@@ -619,7 +581,6 @@ void addCharacteristic(uint8_t * UUID, uint8_t * handleChar, uint8_t * handleSer
 	ADD_CUSTOM_CHAR[5] = 0x00;
 	ADD_CUSTOM_CHAR[23] = maxsize;
 	ADD_CUSTOM_CHAR[24] = proprieties;
-
 
 	ADD_CUSTOM_CHAR[25] = secPermissions;
 
@@ -692,7 +653,7 @@ void disconnectBLE()
 		}
 		free(rxEvent);
 	}
-	printf("%d %d\n",connectionHandler[0],connectionHandler[1]);
+	//printf("%d %d\n",connectionHandler[0],connectionHandler[1]);
 }
 /**
  * DO NOT CHANGE FUNCTION definition
@@ -703,20 +664,20 @@ void setDiscoverability(uint8_t mode)
 {
 	if (mode == 1)
 	{
-		is_disoverable = 1;
+		//is_disoverable = 1;
 		setConnectable();
-		printf("discover\n");
+		//printf("discover\n");
 	}
 	else if (mode == 0)
 	{
 		if (BLE_command(ACI_GAP_SET_NON_DISCOVERABLE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE), ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE, sizeof(ACI_GAP_SET_NON_DISCOVERABLE_COMPLETE), 0) == BLE_OK)
 		{
-			printf("non_discover\n");
-			is_disoverable = 0;
+			//printf("non_discover\n");
+			//is_disoverable = 0;
 		}
 		else
 		{
-			printf("fail non cover\n");
+			//printf("fail non cover\n");
 		}
 		free(rxEvent);
 	}
