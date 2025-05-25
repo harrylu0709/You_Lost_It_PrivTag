@@ -6,10 +6,11 @@
 #include "ble.h"
 
 #define SYSTICK_TIM_CLK   	16000000UL //16MHz
-#define LED_PERIOD_MS	  	500	//50
-#define ONE_MIN_CNT	 	  	10  //10*(1000/LED_PERIOD_MS)
+#define NON_DISCOVER_SEC	10
+#define LED_PERIOD_MS	  	500
+#define ONE_MIN_CNT	 	  	(NON_DISCOVER_SEC*(1000/LED_PERIOD_MS))
 #define IRQNO_TIMER5  	  	50
-#define TEN_SEC			  	3000 //10000
+#define TEN_SEC			  	3000
 #define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
 #define DWT_CYCCNT  		(*(volatile uint32_t*)0xE0001004)
 #define DEMCR       		(*(volatile uint32_t*)0xE000EDFC)
