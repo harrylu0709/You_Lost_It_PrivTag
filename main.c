@@ -134,7 +134,7 @@ int main(void)
 {
 	int lost_cnt_sec = 0;
 
-	//initialise_monitor_handles();
+	initialise_monitor_handles();
 	dwt_init();
 	LIS3DSH_init();
 	led_init();
