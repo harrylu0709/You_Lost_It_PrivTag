@@ -133,7 +133,7 @@ uint8_t Read_movement(void)
 int main(void)
 {
 	int lost_cnt_sec = 0;
-
+	//return 0;
 	initialise_monitor_handles();
 	dwt_init();
 	LIS3DSH_init();
@@ -164,11 +164,11 @@ int main(void)
 		}
 		else
 		{
-			dwt_delay_ms(80);
+			dwt_delay_ms(30);
 			if(!is_discoverable)
 			{
 				setDiscoverability(1);
-				leds_set(1);
+				//leds_set(1);
 			}	
 			if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT,BLE_INT_Pin))
 			{

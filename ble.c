@@ -494,7 +494,7 @@ void setConnectable()
 		if (res == BLE_OK)
 		{
 			//printf("connect\n");
-			GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 1);
+			GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 1);
 			stackInitCompleteFlag |= 0x80;
 		}
 	}
@@ -652,7 +652,7 @@ void disconnectBLE()
 	int result = 1;
 	if (BLE_command(command, sizeof(command), EVENT_DISCONNECT_PENDING, 7, 0) == BLE_OK)
 	{
-		dwt_delay_ms(50);
+		dwt_delay_ms(70);
 		result = fetchBleEvent(buffer, 127);
 		if (result == BLE_OK)
 		{
@@ -662,7 +662,8 @@ void disconnectBLE()
 				connectionHandler[0] = -1;
 				connectionHandler[1] = -1;
 				GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_ORANGE, 0);
-				GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
+				GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+				gatt_event_change_flag = 0;
 			}
 		}
 		free(rxEvent);
@@ -689,6 +690,7 @@ void setDiscoverability(uint8_t mode)
 		{
 			//printf("non_discover\n");
 			is_discoverable = 0;
+			GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
 		}
 		else
 		{
