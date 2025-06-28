@@ -134,7 +134,7 @@ int main(void)
 {
 	int lost_cnt_sec = 0;
 	//return 0;
-	initialise_monitor_handles();
+	//initialise_monitor_handles();
 	dwt_init();
 	LIS3DSH_init();
 	led_init();
@@ -148,7 +148,6 @@ int main(void)
 	ble_init();
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
-
 	TIM5_init();
     // /* Manually trigger TIM5 interrupt */
 	//*pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
@@ -164,13 +163,13 @@ int main(void)
 		}
 		else
 		{
-			dwt_delay_ms(30);
+			//dwt_delay_ms(30);
 			if(!is_discoverable)
 			{
 				setDiscoverability(1);
 				//leds_set(1);
 			}	
-			if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT,BLE_INT_Pin))
+			if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin))
 			{
 				catchBLE();
 			}
@@ -193,9 +192,10 @@ int main(void)
 				if(move_flag)
 				{
 					lost_cnt_sec += (TEN_SEC/1000);
-					unsigned char test_str[] = "lost for    sec";
-					test_str[9] = (lost_cnt_sec / 10) +'0';
-					test_str[10] = (lost_cnt_sec % 10)+'0';
+					unsigned char test_str[] = "lost for     sec";
+					test_str[9] = (lost_cnt_sec / 100) +'0';
+					test_str[10] = (lost_cnt_sec / 10) +'0';
+					test_str[11] = (lost_cnt_sec % 10)+'0';
 					updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);	
 				}
 			}
