@@ -1,14 +1,16 @@
 CC=arm-none-eabi-gcc
 OBJCOPY=arm-none-eabi-objcopy
 MACH=cortex-m4
-CFLAGS= -c -mcpu=$(MACH) -mthumb -mfloat-abi=soft -std=gnu11 -Wall -O0 -I./drivers/Inc -I./include
+CFLAGS= -c -mcpu=$(MACH) -mthumb -mfloat-abi=soft -std=gnu11 -Wall -O0 -I./drivers/Inc -I./include -I./USB/Class/CDC/Inc -I./USB/Core/Inc 
 LDFLAGS= -mcpu=$(MACH) -mthumb -mfloat-abi=soft --specs=nano.specs -T stm32_ls.ld -Wl,-Map=final.map
 LDFLAGS_SH= -mcpu=$(MACH) -mthumb -mfloat-abi=soft --specs=rdimon.specs -T stm32_ls.ld -Wl,-Map=final_sh.map
 # Directories
 SRC_DIR = .
 DRIVERS_DIR = drivers/Src
+Core_DIR = USB/Core/Src
+CDC_DIR = USB/Class/CDC/Src
 # Find all .c files
-SRCS = $(wildcard $(SRC_DIR)/*.c) $(wildcard $(DRIVERS_DIR)/*.c)
+SRCS = $(wildcard $(SRC_DIR)/*.c) $(wildcard $(DRIVERS_DIR)/*.c) $(wildcard $(CDC_DIR)/*.c) $(wildcard $(Core_DIR)/*.c) 
 # Convert .c to .o
 OBJS = $(SRCS:.c=.o)
 # Output binary
@@ -37,6 +39,8 @@ $(BIN): $(ELF)
 
 clean:
 	rm -rf $(DRIVERS_DIR)/*.o
+	rm -rf $(Core_DIR)/*.o
+	rm -rf $(CDC_DIR)/*.o
 	rm -rf *.elf
 	rm -rf *.o
 	rm -rf *.map

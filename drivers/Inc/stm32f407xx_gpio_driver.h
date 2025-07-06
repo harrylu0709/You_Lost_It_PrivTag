@@ -217,6 +217,24 @@ typedef struct
 #define GPIO_PIN_PU			1
 #define GPIO_PIN_PD			2
 
+typedef struct
+{
+  uint32_t Pin;       /*!< Specifies the GPIO pins to be configured.
+                           This parameter can be any value of @ref GPIO_pins_define */
+
+  uint32_t Mode;      /*!< Specifies the operating mode for the selected pins.
+                           This parameter can be a value of @ref GPIO_mode_define */
+
+  uint32_t Pull;      /*!< Specifies the Pull-up or Pull-Down activation for the selected pins.
+                           This parameter can be a value of @ref GPIO_pull_define */
+
+  uint32_t Speed;     /*!< Specifies the speed for the selected pins.
+                           This parameter can be a value of @ref GPIO_speed_define */
+
+  uint32_t Alternate;  /*!< Peripheral to be connected to the selected pins. 
+                            This parameter can be a value of @ref GPIO_Alternate_function_selection */
+}GPIO_InitTypeDef;
+
 /******************************************************************************************
  *								APIs supported by this driver
  *		 For more information about the APIs check the function definitions
@@ -251,8 +269,60 @@ void GPIO_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnorDi);
 void GPIO_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
 void GPIO_IRQHandling(uint8_t PinNumber);
 
+#define GPIO_MODE_Pos                           0U
+#define GPIO_MODE                               (0x3UL << GPIO_MODE_Pos)
+#define MODE_INPUT                              (0x0UL << GPIO_MODE_Pos)
+#define MODE_OUTPUT                             (0x1UL << GPIO_MODE_Pos)
+#define MODE_AF                                 (0x2UL << GPIO_MODE_Pos)
+#define MODE_ANALOG                             (0x3UL << GPIO_MODE_Pos)
 
 
+#define EXTI_MODE_Pos                           16U
+#define EXTI_MODE                               (0x3UL << EXTI_MODE_Pos)
+#define EXTI_IT                                 (0x1UL << EXTI_MODE_Pos)
+#define EXTI_EVT                                (0x2UL << EXTI_MODE_Pos)
+
+#define TRIGGER_MODE_Pos                         20U
+#define TRIGGER_MODE                            (0x7UL << TRIGGER_MODE_Pos)
+#define TRIGGER_RISING                          (0x1UL << TRIGGER_MODE_Pos)
+#define TRIGGER_FALLING                         (0x2UL << TRIGGER_MODE_Pos)
+
+
+#define  GPIO_MODE_INPUT                        MODE_INPUT    
+
+#define OUTPUT_TYPE_Pos                         4U
+#define OUTPUT_TYPE                             (0x1UL << OUTPUT_TYPE_Pos)
+#define OUTPUT_PP                               (0x0UL << OUTPUT_TYPE_Pos)
+#define  GPIO_NOPULL        0x00000000U
+#define  GPIO_MODE_AF_PP                        (MODE_AF | OUTPUT_PP)                                       /*!< Alternate Function Push Pull Mode     */
+#define  GPIO_SPEED_FREQ_LOW         0x00000000U
+#define GPIO_OSPEEDR_OSPEED0_Pos         (0U)                                  
+#define GPIO_OSPEEDR_OSPEED0_Msk         (0x3UL << GPIO_OSPEEDR_OSPEED0_Pos)    /*!< 0x00000003 */
+#define GPIO_OSPEEDR_OSPEED0             GPIO_OSPEEDR_OSPEED0_Msk 
+#define GPIO_OSPEEDER_OSPEEDR0           GPIO_OSPEEDR_OSPEED0
+
+#define GPIO_OTYPER_OT0_Pos              (0U)                                  
+#define GPIO_OTYPER_OT0_Msk              (0x1UL << GPIO_OTYPER_OT0_Pos)         /*!< 0x00000001 */
+#define GPIO_OTYPER_OT0                  GPIO_OTYPER_OT0_Msk
+#define GPIO_OTYPER_OT_0                 GPIO_OTYPER_OT0
+
+#define GPIO_PUPDR_PUPD0_Pos             (0U)                                  
+#define GPIO_PUPDR_PUPD0_Msk             (0x3UL << GPIO_PUPDR_PUPD0_Pos)        /*!< 0x00000003 */
+#define GPIO_PUPDR_PUPD0                 GPIO_PUPDR_PUPD0_Msk 
+#define GPIO_PUPDR_PUPDR0                GPIO_PUPDR_PUPD0
+
+#define GPIO_MODER_MODER0_Pos            (0U)                                  
+#define GPIO_MODER_MODER0_Msk            (0x3UL << GPIO_MODER_MODER0_Pos)       /*!< 0x00000003 */
+#define GPIO_MODER_MODER0                GPIO_MODER_MODER0_Msk 
+
+#define GPIO_GET_INDEX(__GPIOx__)    (uint8_t)(((__GPIOx__) == (GPIOA))? 0U :\
+                                               ((__GPIOx__) == (GPIOB))? 1U :\
+                                               ((__GPIOx__) == (GPIOC))? 2U :\
+                                               ((__GPIOx__) == (GPIOD))? 3U :\
+                                               ((__GPIOx__) == (GPIOE))? 4U :\
+                                               ((__GPIOx__) == (GPIOF))? 5U :\
+                                               ((__GPIOx__) == (GPIOG))? 6U :\
+                                               ((__GPIOx__) == (GPIOH))? 7U : 8U)
 
 
 

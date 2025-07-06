@@ -15,12 +15,115 @@
 #define __weak __attribute__((weak))
 #define ARRAY_LENGTH(a)  (sizeof(a)/sizeof(a[0]))
 
-
 /**********************************START:Processor Specific Details **********************************/
+
+/*!< USB registers base address */
+#define USB_OTG_HS_PERIPH_BASE               0x40040000UL
+#define USB_OTG_FS_PERIPH_BASE               0x50000000UL
+
+#define USB_OTG_GLOBAL_BASE                  0x000UL
+#define USB_OTG_DEVICE_BASE                  0x800UL
+#define USB_OTG_IN_ENDPOINT_BASE             0x900UL
+#define USB_OTG_OUT_ENDPOINT_BASE            0xB00UL
+#define USB_OTG_EP_REG_SIZE                  0x20UL
+#define USB_OTG_HOST_BASE                    0x400UL
+#define USB_OTG_HOST_PORT_BASE               0x440UL
+#define USB_OTG_HOST_CHANNEL_BASE            0x500UL
+#define USB_OTG_HOST_CHANNEL_SIZE            0x20UL
+#define USB_OTG_PCGCCTL_BASE                 0xE00UL
+#define USB_OTG_FIFO_BASE                    0x1000UL
+#define USB_OTG_FIFO_SIZE                    0x1000UL
+
+#define UID_BASE                     0x1FFF7A10UL           /*!< Unique device ID register base address */
+#define FLASHSIZE_BASE               0x1FFF7A22UL           /*!< FLASH Size register base address       */
+#define PACKAGE_BASE                 0x1FFF7BF0UL           /*!< Package size register base address     */
+#define USB_OTG_FS          ((USB_OTG_GlobalTypeDef *) USB_OTG_FS_PERIPH_BASE)
+#define USB_OTG_HS          ((USB_OTG_GlobalTypeDef *) USB_OTG_HS_PERIPH_BASE)
+
+
+#define RCC_CFGR_PPRE1_Pos                 (10U)                               
+#define RCC_CFGR_PPRE1_Msk                 (0x7UL << RCC_CFGR_PPRE1_Pos)        /*!< 0x00001C00 */
+#define RCC_CFGR_PPRE1                     RCC_CFGR_PPRE1_Msk                  /*!< PRE1[2:0] bits (APB1 prescaler) */
+#define RCC_CFGR_PPRE1_0                   (0x1UL << RCC_CFGR_PPRE1_Pos)        /*!< 0x00000400 */
+#define RCC_CFGR_PPRE1_1                   (0x2UL << RCC_CFGR_PPRE1_Pos)        /*!< 0x00000800 */
+#define RCC_CFGR_PPRE1_2                   (0x4UL << RCC_CFGR_PPRE1_Pos)        /*!< 0x00001000 */
+
+/*!< PPRE2 configuration */
+#define RCC_CFGR_PPRE2_Pos                 (13U)                               
+#define RCC_CFGR_PPRE2_Msk                 (0x7UL << RCC_CFGR_PPRE2_Pos)        /*!< 0x0000E000 */
+#define RCC_CFGR_PPRE2                     RCC_CFGR_PPRE2_Msk                  /*!< PRE2[2:0] bits (APB2 prescaler) */
+#define RCC_CFGR_PPRE2_0                   (0x1UL << RCC_CFGR_PPRE2_Pos)        /*!< 0x00002000 */
+#define RCC_CFGR_PPRE2_1                   (0x2UL << RCC_CFGR_PPRE2_Pos)        /*!< 0x00004000 */
+#define RCC_CFGR_PPRE2_2                   (0x4UL << RCC_CFGR_PPRE2_Pos)        /*!< 0x00008000 */
+
+#define RCC_PLLCFGR_PLLSRC_HSE_Pos         (22U)                               
+#define RCC_PLLCFGR_PLLSRC_HSE_Msk         (0x1UL << RCC_PLLCFGR_PLLSRC_HSE_Pos) /*!< 0x00400000 */
+#define RCC_PLLCFGR_PLLSRC_HSE             RCC_PLLCFGR_PLLSRC_HSE_Msk    
+
+#define PWR_CR_VOS_Pos         (14U)                                           
+#define PWR_CR_VOS_Msk         (0x1UL << PWR_CR_VOS_Pos)                        /*!< 0x00004000 */
+#define PWR_CR_VOS             PWR_CR_VOS_Msk                                  /*!< VOS bit (Regulator voltage scaling output selection) */
+
+
+#define SET_BIT(REG, BIT)     ((REG) |= (BIT))
+
+#define CLEAR_BIT(REG, BIT)   ((REG) &= ~(BIT))
+
+#define READ_BIT(REG, BIT)    ((REG) & (BIT))
+
+#define CLEAR_REG(REG)        ((REG) = (0x0))
+
+#define WRITE_REG(REG, VAL)   ((REG) = (VAL))
+
+#define READ_REG(REG)         ((REG))
+
+#define MODIFY_REG(REG, CLEARMASK, SETMASK)  WRITE_REG((REG), (((READ_REG(REG)) & (~(CLEARMASK))) | (SETMASK)))
+
+#define RCC_APB1ENR_PWREN_Pos              (28U)                               
+#define RCC_APB1ENR_PWREN_Msk              (0x1UL << RCC_APB1ENR_PWREN_Pos)     /*!< 0x10000000 */
+#define RCC_APB1ENR_PWREN                  RCC_APB1ENR_PWREN_Msk 
+
+
+#define FLASH_ACR_LATENCY_Pos          (0U)
+#define FLASH_ACR_LATENCY_Msk          (0x7UL << FLASH_ACR_LATENCY_Pos)         /*!< 0x00000007 */
+#define FLASH_ACR_LATENCY              FLASH_ACR_LATENCY_Msk
+#define FLASH_ACR_ICEN_Pos             (9U)                                    
+#define FLASH_ACR_ICEN_Msk             (0x1UL << FLASH_ACR_ICEN_Pos)            /*!< 0x00000200 */
+#define FLASH_ACR_ICEN                 FLASH_ACR_ICEN_Msk                      
+#define FLASH_ACR_DCEN_Pos             (10U)                                   
+#define FLASH_ACR_DCEN_Msk             (0x1UL << FLASH_ACR_DCEN_Pos)            /*!< 0x00000400 */
+#define FLASH_ACR_DCEN                 FLASH_ACR_DCEN_Msk
+
+#define FLASH_ACR_PRFTEN_Pos           (8U)                                    
+#define FLASH_ACR_PRFTEN_Msk           (0x1UL << FLASH_ACR_PRFTEN_Pos)          /*!< 0x00000100 */
+#define FLASH_ACR_PRFTEN               FLASH_ACR_PRFTEN_Msk
+
+#define NVIC_PRIORITYGROUP_4         0x00000003U /*!< 4 bits for pre-emption priority
+                                                      0 bits for subpriority */
+#define  TICK_INT_PRIORITY            0U   /*!< tick interrupt priority */
+#define SYSCFG_OFFSET             (SYSCFG_BASEADDR - PERIPH_BASE)
+#define CMPCR_OFFSET              (SYSCFG_OFFSET + 0x20U) 
+#define SYSCFG_CMPCR_CMP_PD_Pos              (0U)    
+#define CMP_PD_BIT_NUMBER         SYSCFG_CMPCR_CMP_PD_Pos
+#define CMPCR_CMP_PD_BB           (uint32_t)(PERIPH_BB_BASE + (CMPCR_OFFSET * 32U) + (CMP_PD_BIT_NUMBER * 4U))
+
+#define SCB_AIRCR_VECTKEY_Pos              16U                                            /*!< SCB AIRCR: VECTKEY Position */
+#define SCB_AIRCR_VECTKEY_Msk              (0xFFFFUL << SCB_AIRCR_VECTKEY_Pos)            /*!< SCB AIRCR: VECTKEY Mask */
+#define SCB_AIRCR_PRIGROUP_Pos              8U                                            /*!< SCB AIRCR: PRIGROUP Position */
+#define SCB_AIRCR_PRIGROUP_Msk             (7UL << SCB_AIRCR_PRIGROUP_Pos)                /*!< SCB AIRCR: PRIGROUP Mask */
+#define SCB_AIRCR_VECTKEY_Pos              16U                                            /*!< SCB AIRCR: VECTKEY Position */
+#define SCB_AIRCR_VECTKEY_Msk              (0xFFFFUL << SCB_AIRCR_VECTKEY_Pos)            /*!< SCB AIRCR: VECTKEY Mask */
+#define SCB_AIRCR_PRIGROUP_Pos              8U                                            /*!< SCB AIRCR: PRIGROUP Position */
+#define SCB_AIRCR_PRIGROUP_Msk             (7UL << SCB_AIRCR_PRIGROUP_Pos)                /*!< SCB AIRCR: PRIGROUP Mask */
+#define SCB_SCR_SLEEPDEEP_Pos               2U                                            /*!< SCB SCR: SLEEPDEEP Position */
+#define SCB_SCR_SLEEPDEEP_Msk              (1UL << SCB_SCR_SLEEPDEEP_Pos)                 /*!< SCB SCR: SLEEPDEEP Mask */
+#define SCB_SCR_SLEEPONEXIT_Pos             1U                                            /*!< SCB SCR: SLEEPONEXIT Position */
+#define SCB_SCR_SLEEPONEXIT_Msk            (1UL << SCB_SCR_SLEEPONEXIT_Pos)               /*!< SCB SCR: SLEEPONEXIT Mask */
+
+
 /*
  * ARM Cortex Mx Processor NVIC ISERx register Addresses
  */
-
 #define NVIC_ISER0          ( (__vo uint32_t*)0xE000E100 )
 #define NVIC_ISER1          ( (__vo uint32_t*)0xE000E104 )
 #define NVIC_ISER2          ( (__vo uint32_t*)0xE000E108 )
@@ -45,6 +148,7 @@
  * ARM Cortex Mx Processor number of priority bits implemented in Priority Register
  */
 #define NO_PR_BITS_IMPLEMENTED  4
+#define   __NVIC_PRIO_BITS        NO_PR_BITS_IMPLEMENTED
 
 /*
  * base addresses of Flash and SRAM memories
@@ -82,10 +186,13 @@
 #define GPIOH_BASEADDR 					 (AHB1PERIPH_BASEADDR + 0x1C00)
 #define GPIOI_BASEADDR 					 (AHB1PERIPH_BASEADDR + 0x2000)
 #define RCC_BASEADDR                     (AHB1PERIPH_BASEADDR + 0x3800)
+#define FLASH_R_BASE          (AHB1PERIPH_BASEADDR + 0x3C00UL)
+
 /*
  * Base addresses of peripherals which are hanging on APB1 bus
  * TODO : Complete for all other peripherals
  */
+#define PWR_BASE                (APB1PERIPH_BASEADDR + 0x7000UL)
 #define I2C1_BASEADDR						(APB1PERIPH_BASEADDR + 0x5400)
 #define I2C2_BASEADDR						(APB1PERIPH_BASEADDR + 0x5800)
 #define I2C3_BASEADDR						(APB1PERIPH_BASEADDR + 0x5C00)
@@ -97,6 +204,7 @@
 #define USART3_BASEADDR						(APB1PERIPH_BASEADDR + 0x4800)
 #define UART4_BASEADDR						(APB1PERIPH_BASEADDR + 0x4C00)
 #define UART5_BASEADDR						(APB1PERIPH_BASEADDR + 0x5000)
+#define TIM6_BASEADDR						(APB1PERIPH_BASEADDR + 0x1000)
 
 #define TIM5_BASEADDR						(APB1PERIPH_BASEADDR + 0x0C00)
 #define TIM2_BASEADDR						(APB1PERIPH_BASEADDR + 0x0000)
@@ -286,6 +394,274 @@ typedef struct
 	__vo uint32_t OR5;        /*!< TODO,     										Address offset: 0x08 */
 } TIM_RegDef_t;
 
+typedef struct
+{
+  volatile uint32_t GOTGCTL;              /*!< USB_OTG Control and Status Register          000h */
+  volatile uint32_t GOTGINT;              /*!< USB_OTG Interrupt Register                   004h */
+  volatile uint32_t GAHBCFG;              /*!< Core AHB Configuration Register              008h */
+  volatile uint32_t GUSBCFG;              /*!< Core USB Configuration Register              00Ch */
+  volatile uint32_t GRSTCTL;              /*!< Core Reset Register                          010h */
+  volatile uint32_t GINTSTS;              /*!< Core Interrupt Register                      014h */
+  volatile uint32_t GINTMSK;              /*!< Core Interrupt Mask Register                 018h */
+  volatile uint32_t GRXSTSR;              /*!< Receive Sts Q Read Register                  01Ch */
+  volatile uint32_t GRXSTSP;              /*!< Receive Sts Q Read & POP Register            020h */
+  volatile uint32_t GRXFSIZ;              /*!< Receive FIFO Size Register                   024h */
+  volatile uint32_t DIEPTXF0_HNPTXFSIZ;   /*!< EP0 / Non Periodic Tx FIFO Size Register     028h */
+  volatile uint32_t HNPTXSTS;             /*!< Non Periodic Tx FIFO/Queue Sts reg           02Ch */
+  uint32_t Reserved30[2];             /*!< Reserved                                     030h */
+  volatile uint32_t GCCFG;                /*!< General Purpose IO Register                  038h */
+  volatile uint32_t CID;                  /*!< User ID Register                             03Ch */
+  uint32_t  Reserved40[48];           /*!< Reserved                                0x40-0xFF */
+  volatile uint32_t HPTXFSIZ;             /*!< Host Periodic Tx FIFO Size Reg               100h */
+  volatile uint32_t DIEPTXF[0x0F];        /*!< dev Periodic Transmit FIFO                        */
+} USB_OTG_GlobalTypeDef;
+
+/** 
+  * @brief USB_OTG_device_Registers
+  */
+typedef struct 
+{
+  volatile uint32_t DCFG;            /*!< dev Configuration Register   800h */
+  volatile uint32_t DCTL;            /*!< dev Control Register         804h */
+  volatile uint32_t DSTS;            /*!< dev Status Register (RO)     808h */
+  uint32_t Reserved0C;           /*!< Reserved                     80Ch */
+  volatile uint32_t DIEPMSK;         /*!< dev IN Endpoint Mask         810h */
+  volatile uint32_t DOEPMSK;         /*!< dev OUT Endpoint Mask        814h */
+  volatile uint32_t DAINT;           /*!< dev All Endpoints Itr Reg    818h */
+  volatile uint32_t DAINTMSK;        /*!< dev All Endpoints Itr Mask   81Ch */
+  uint32_t  Reserved20;          /*!< Reserved                     820h */
+  uint32_t Reserved9;            /*!< Reserved                     824h */
+  volatile uint32_t DVBUSDIS;        /*!< dev VBUS discharge Register  828h */
+  volatile uint32_t DVBUSPULSE;      /*!< dev VBUS Pulse Register      82Ch */
+  volatile uint32_t DTHRCTL;         /*!< dev threshold                830h */
+  volatile uint32_t DIEPEMPMSK;      /*!< dev empty msk                834h */
+  volatile uint32_t DEACHINT;        /*!< dedicated EP interrupt       838h */
+  volatile uint32_t DEACHMSK;        /*!< dedicated EP msk             83Ch */
+  uint32_t Reserved40;           /*!< dedicated EP mask            840h */
+  volatile uint32_t DINEP1MSK;       /*!< dedicated EP mask            844h */
+  uint32_t  Reserved44[15];      /*!< Reserved                 844-87Ch */
+  volatile uint32_t DOUTEP1MSK;      /*!< dedicated EP msk             884h */
+} USB_OTG_DeviceTypeDef;
+
+/** 
+  * @brief USB_OTG_IN_Endpoint-Specific_Register
+  */
+typedef struct 
+{
+  volatile uint32_t DIEPCTL;           /*!< dev IN Endpoint Control Reg    900h + (ep_num * 20h) + 00h */
+  uint32_t Reserved04;             /*!< Reserved                       900h + (ep_num * 20h) + 04h */
+  volatile uint32_t DIEPINT;           /*!< dev IN Endpoint Itr Reg        900h + (ep_num * 20h) + 08h */
+  uint32_t Reserved0C;             /*!< Reserved                       900h + (ep_num * 20h) + 0Ch */
+  volatile uint32_t DIEPTSIZ;          /*!< IN Endpoint Txfer Size         900h + (ep_num * 20h) + 10h */
+  volatile uint32_t DIEPDMA;           /*!< IN Endpoint DMA Address Reg    900h + (ep_num * 20h) + 14h */
+  volatile uint32_t DTXFSTS;           /*!< IN Endpoint Tx FIFO Status Reg 900h + (ep_num * 20h) + 18h */
+  uint32_t Reserved18;             /*!< Reserved  900h+(ep_num*20h)+1Ch-900h+ (ep_num * 20h) + 1Ch */
+} USB_OTG_INEndpointTypeDef;
+
+/** 
+  * @brief USB_OTG_OUT_Endpoint-Specific_Registers
+  */
+typedef struct 
+{
+  volatile uint32_t DOEPCTL;       /*!< dev OUT Endpoint Control Reg           B00h + (ep_num * 20h) + 00h */
+  uint32_t Reserved04;         /*!< Reserved                               B00h + (ep_num * 20h) + 04h */
+  volatile uint32_t DOEPINT;       /*!< dev OUT Endpoint Itr Reg               B00h + (ep_num * 20h) + 08h */
+  uint32_t Reserved0C;         /*!< Reserved                               B00h + (ep_num * 20h) + 0Ch */
+  volatile uint32_t DOEPTSIZ;      /*!< dev OUT Endpoint Txfer Size            B00h + (ep_num * 20h) + 10h */
+  volatile uint32_t DOEPDMA;       /*!< dev OUT Endpoint DMA Address           B00h + (ep_num * 20h) + 14h */
+  uint32_t Reserved18[2];      /*!< Reserved B00h + (ep_num * 20h) + 18h - B00h + (ep_num * 20h) + 1Ch */
+} USB_OTG_OUTEndpointTypeDef;
+
+/** 
+  * @brief USB_OTG_Host_Mode_Register_Structures
+  */
+typedef struct 
+{
+  volatile uint32_t HCFG;             /*!< Host Configuration Register          400h */
+  volatile uint32_t HFIR;             /*!< Host Frame Interval Register         404h */
+  volatile uint32_t HFNUM;            /*!< Host Frame Nbr/Frame Remaining       408h */
+  uint32_t Reserved40C;           /*!< Reserved                             40Ch */
+  volatile uint32_t HPTXSTS;          /*!< Host Periodic Tx FIFO/ Queue Status  410h */
+  volatile uint32_t HAINT;            /*!< Host All Channels Interrupt Register 414h */
+  volatile uint32_t HAINTMSK;         /*!< Host All Channels Interrupt Mask     418h */
+} USB_OTG_HostTypeDef;
+
+/** 
+  * @brief USB_OTG_Host_Channel_Specific_Registers
+  */
+typedef struct
+{
+  volatile uint32_t HCCHAR;           /*!< Host Channel Characteristics Register    500h */
+  volatile uint32_t HCSPLT;           /*!< Host Channel Split Control Register      504h */
+  volatile uint32_t HCINT;            /*!< Host Channel Interrupt Register          508h */
+  volatile uint32_t HCINTMSK;         /*!< Host Channel Interrupt Mask Register     50Ch */
+  volatile uint32_t HCTSIZ;           /*!< Host Channel Transfer Size Register      510h */
+  volatile uint32_t HCDMA;            /*!< Host Channel DMA Address Register        514h */
+  uint32_t Reserved[2];           /*!< Reserved                                      */
+} USB_OTG_HostChannelTypeDef;
+
+
+typedef struct
+{
+  uint32_t PLLState;   /*!< The new state of the PLL.
+                            This parameter can be a value of @ref RCC_PLL_Config                      */
+
+  uint32_t PLLSource;  /*!< RCC_PLLSource: PLL entry clock source.
+                            This parameter must be a value of @ref RCC_PLL_Clock_Source               */
+
+  uint32_t PLLM;       /*!< PLLM: Division factor for PLL VCO input clock.
+                            This parameter must be a number between Min_Data = 0 and Max_Data = 63    */
+
+  uint32_t PLLN;       /*!< PLLN: Multiplication factor for PLL VCO output clock.
+                            This parameter must be a number between Min_Data = 50 and Max_Data = 432 
+                            except for STM32F411xE devices where the Min_Data = 192 */
+
+  uint32_t PLLP;       /*!< PLLP: Division factor for main system clock (SYSCLK).
+                            This parameter must be a value of @ref RCC_PLLP_Clock_Divider             */
+
+  uint32_t PLLQ;       /*!< PLLQ: Division factor for OTG FS, SDIO and RNG clocks.
+                            This parameter must be a number between Min_Data = 2 and Max_Data = 15    */
+}RCC_PLLInitTypeDef;
+
+typedef struct
+{
+  uint32_t OscillatorType;       /*!< The oscillators to be configured.
+                                      This parameter can be a value of @ref RCC_Oscillator_Type                   */
+
+  uint32_t HSEState;             /*!< The new state of the HSE.
+                                      This parameter can be a value of @ref RCC_HSE_Config                        */
+
+  uint32_t LSEState;             /*!< The new state of the LSE.
+                                      This parameter can be a value of @ref RCC_LSE_Config                        */
+
+  uint32_t HSIState;             /*!< The new state of the HSI.
+                                      This parameter can be a value of @ref RCC_HSI_Config                        */
+
+  uint32_t HSICalibrationValue;  /*!< The HSI calibration trimming value (default is RCC_HSICALIBRATION_DEFAULT).
+                                       This parameter must be a number between Min_Data = 0x00 and Max_Data = 0x1F */
+
+  uint32_t LSIState;             /*!< The new state of the LSI.
+                                      This parameter can be a value of @ref RCC_LSI_Config                        */
+
+  RCC_PLLInitTypeDef PLL;        /*!< PLL structure parameters                                                    */
+}RCC_OscInitTypeDef;
+
+/**
+  * @brief  RCC System, AHB and APB busses clock configuration structure definition
+  */
+typedef struct
+{
+  uint32_t ClockType;             /*!< The clock to be configured.
+                                       This parameter can be a value of @ref RCC_System_Clock_Type      */
+
+  uint32_t SYSCLKSource;          /*!< The clock source (SYSCLKS) used as system clock.
+                                       This parameter can be a value of @ref RCC_System_Clock_Source    */
+
+  uint32_t AHBCLKDivider;         /*!< The AHB clock (HCLK) divider. This clock is derived from the system clock (SYSCLK).
+                                       This parameter can be a value of @ref RCC_AHB_Clock_Source       */
+
+  uint32_t APB1CLKDivider;        /*!< The APB1 clock (PCLK1) divider. This clock is derived from the AHB clock (HCLK).
+                                       This parameter can be a value of @ref RCC_APB1_APB2_Clock_Source */
+
+  uint32_t APB2CLKDivider;        /*!< The APB2 clock (PCLK2) divider. This clock is derived from the AHB clock (HCLK).
+                                       This parameter can be a value of @ref RCC_APB1_APB2_Clock_Source */
+
+}RCC_ClkInitTypeDef;
+
+
+typedef struct
+{
+  volatile uint32_t CR;   /*!< PWR power control register,        Address offset: 0x00 */
+  volatile uint32_t CSR;  /*!< PWR power control/status register, Address offset: 0x04 */
+} PWR_TypeDef;
+
+typedef struct
+{
+  volatile uint32_t ACR;      /*!< FLASH access control register,   Address offset: 0x00 */
+  volatile uint32_t KEYR;     /*!< FLASH key register,              Address offset: 0x04 */
+  volatile uint32_t OPTKEYR;  /*!< FLASH option key register,       Address offset: 0x08 */
+  volatile uint32_t SR;       /*!< FLASH status register,           Address offset: 0x0C */
+  volatile uint32_t CR;       /*!< FLASH control register,          Address offset: 0x10 */
+  volatile uint32_t OPTCR;    /*!< FLASH option control register ,  Address offset: 0x14 */
+  volatile uint32_t OPTCR1;   /*!< FLASH option control register 1, Address offset: 0x18 */
+} FLASH_TypeDef;
+
+
+typedef struct
+{
+  volatile uint32_t CTRL;                   /*!< Offset: 0x000 (R/W)  SysTick Control and Status Register */
+  volatile uint32_t LOAD;                   /*!< Offset: 0x004 (R/W)  SysTick Reload Value Register */
+  volatile uint32_t VAL;                    /*!< Offset: 0x008 (R/W)  SysTick Current Value Register */
+  volatile const uint32_t CALIB;                  /*!< Offset: 0x00C (R/ )  SysTick Calibration Register */
+} SysTick_Type;
+
+#define     __IM     volatile const      /*! Defines 'read only' structure member permissions */
+#define     __OM     volatile            /*! Defines 'write only' structure member permissions */
+#define     __IOM    volatile            /*! Defines 'read / write' structure member permissions */
+#define     __IO    volatile            
+
+
+
+typedef struct
+{
+  __IM  uint32_t CPUID;                  /*!< Offset: 0x000 (R/ )  CPUID Base Register */
+  __IOM uint32_t ICSR;                   /*!< Offset: 0x004 (R/W)  Interrupt Control and State Register */
+  __IOM uint32_t VTOR;                   /*!< Offset: 0x008 (R/W)  Vector Table Offset Register */
+  __IOM uint32_t AIRCR;                  /*!< Offset: 0x00C (R/W)  Application Interrupt and Reset Control Register */
+  __IOM uint32_t SCR;                    /*!< Offset: 0x010 (R/W)  System Control Register */
+  __IOM uint32_t CCR;                    /*!< Offset: 0x014 (R/W)  Configuration Control Register */
+  __IOM uint8_t  SHP[12U];               /*!< Offset: 0x018 (R/W)  System Handlers Priority Registers (4-7, 8-11, 12-15) */
+  __IOM uint32_t SHCSR;                  /*!< Offset: 0x024 (R/W)  System Handler Control and State Register */
+  __IOM uint32_t CFSR;                   /*!< Offset: 0x028 (R/W)  Configurable Fault Status Register */
+  __IOM uint32_t HFSR;                   /*!< Offset: 0x02C (R/W)  HardFault Status Register */
+  __IOM uint32_t DFSR;                   /*!< Offset: 0x030 (R/W)  Debug Fault Status Register */
+  __IOM uint32_t MMFAR;                  /*!< Offset: 0x034 (R/W)  MemManage Fault Address Register */
+  __IOM uint32_t BFAR;                   /*!< Offset: 0x038 (R/W)  BusFault Address Register */
+  __IOM uint32_t AFSR;                   /*!< Offset: 0x03C (R/W)  Auxiliary Fault Status Register */
+  __IM  uint32_t PFR[2U];                /*!< Offset: 0x040 (R/ )  Processor Feature Register */
+  __IM  uint32_t DFR;                    /*!< Offset: 0x048 (R/ )  Debug Feature Register */
+  __IM  uint32_t ADR;                    /*!< Offset: 0x04C (R/ )  Auxiliary Feature Register */
+  __IM  uint32_t MMFR[4U];               /*!< Offset: 0x050 (R/ )  Memory Model Feature Register */
+  __IM  uint32_t ISAR[5U];               /*!< Offset: 0x060 (R/ )  Instruction Set Attributes Register */
+        uint32_t RESERVED0[5U];
+  __IOM uint32_t CPACR;                  /*!< Offset: 0x088 (R/W)  Coprocessor Access Control Register */
+} SCB_Type;
+
+typedef struct
+{
+  __IO uint32_t CR;     /*!< DMA stream x configuration register      */
+  __IO uint32_t NDTR;   /*!< DMA stream x number of data register     */
+  __IO uint32_t PAR;    /*!< DMA stream x peripheral address register */
+  __IO uint32_t M0AR;   /*!< DMA stream x memory 0 address register   */
+  __IO uint32_t M1AR;   /*!< DMA stream x memory 1 address register   */
+  __IO uint32_t FCR;    /*!< DMA stream x FIFO control register       */
+} DMA_Stream_TypeDef;
+
+typedef struct
+{
+  __IO uint32_t LISR;   /*!< DMA low interrupt status register,      Address offset: 0x00 */
+  __IO uint32_t HISR;   /*!< DMA high interrupt status register,     Address offset: 0x04 */
+  __IO uint32_t LIFCR;  /*!< DMA low interrupt flag clear register,  Address offset: 0x08 */
+  __IO uint32_t HIFCR;  /*!< DMA high interrupt flag clear register, Address offset: 0x0C */
+} DMA_TypeDef;
+
+typedef struct
+{
+  __IOM uint32_t ISER[8U];               /*!< Offset: 0x000 (R/W)  Interrupt Set Enable Register */
+        uint32_t RESERVED0[24U];
+  __IOM uint32_t ICER[8U];               /*!< Offset: 0x080 (R/W)  Interrupt Clear Enable Register */
+        uint32_t RSERVED1[24U];
+  __IOM uint32_t ISPR[8U];               /*!< Offset: 0x100 (R/W)  Interrupt Set Pending Register */
+        uint32_t RESERVED2[24U];
+  __IOM uint32_t ICPR[8U];               /*!< Offset: 0x180 (R/W)  Interrupt Clear Pending Register */
+        uint32_t RESERVED3[24U];
+  __IOM uint32_t IABR[8U];               /*!< Offset: 0x200 (R/W)  Interrupt Active bit Register */
+        uint32_t RESERVED4[56U];
+  __IOM uint8_t  IP[240U];               /*!< Offset: 0x300 (R/W)  Interrupt Priority Register (8Bit wide) */
+        uint32_t RESERVED5[644U];
+  __OM  uint32_t STIR;                   /*!< Offset: 0xE00 ( /W)  Software Trigger Interrupt Register */
+}  NVIC_Type;
+
 /*
  * peripheral definitions ( Peripheral base addresses typecasted to xxx_RegDef_t)
  */
@@ -321,6 +697,18 @@ typedef struct
 #define USART6  			((USART_RegDef_t*)USART6_BASEADDR)
 #define TIM2  				((TIM_RegDef_t*)TIM2_BASEADDR)
 #define TIM5  				((TIM_RegDef_t*)TIM5_BASEADDR)
+#define TIM6          ((TIM_RegDef_t *)TIM6_BASEADDR)
+#define PWR           ((PWR_TypeDef *) PWR_BASE)
+#define FLASH         ((FLASH_TypeDef *) FLASH_R_BASE)
+#define SCS_BASE            (0xE000E000UL)                            /*!< System Control Space Base Address */
+#define SysTick_BASE        (SCS_BASE +  0x0010UL) 
+  #define NVIC_BASE           (SCS_BASE +  0x0100UL) 
+
+#define SysTick       ((SysTick_Type   *)SysTick_BASE)   /*!< SysTick configuration struct */
+
+#define NVIC                ((NVIC_Type*)NVIC_BASE)
+#define SCB_BASE            (SCS_BASE +  0x0D00UL)  
+#define SCB                 ((SCB_Type *)SCB_BASE ) 
 /*
  * Clock Enable Macros for GPIOx peripherals
  * RCC registers 6.3
@@ -464,10 +852,14 @@ typedef struct
 #define IRQ_NO_I2C2_ER     34
 #define IRQ_NO_I2C3_EV     79
 #define IRQ_NO_I2C3_ER     80
-#define IRQ_NO_USART1	   37
-#define IRQ_NO_USART2	   38
-#define IRQ_NO_TIM2		   28 //APB1 45MHz
-#define IRQ_NO_TIM5		   50 //APB1 45MHz
+#define IRQ_NO_USART1	     37
+#define IRQ_NO_USART2	     38
+#define IRQ_NO_TIM2		     28 //APB1 45MHz
+#define IRQ_NO_TIM5		     50 //APB1 45MHz
+#define OTG_FS_IRQn        67
+#define TIM6_DAC_IRQn       54
+#define SysTick_IRQn -1
+
 //#define IRQ_NO_USART3	    39
 //#define IRQ_NO_UART4	    52
 //#define IRQ_NO_UART5	    53

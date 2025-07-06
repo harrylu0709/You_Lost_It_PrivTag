@@ -5,6 +5,14 @@
 #include "led.h"
 #include "ble.h"
 
+#include "usbd_core.h"
+#include "usbd_desc.h"
+#include "usbd_cdc.h"
+#include "usbd_cdc_if.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_def.h"
+#include "stm32f4xx_hal_pcd.h"
+
 #define SYSTICK_TIM_CLK   	16000000UL //16MHz
 #define NON_DISCOVER_SEC	10
 #define LED_PERIOD_MS	  	500
@@ -18,6 +26,9 @@
 extern I2C_Handle_t g_ds1307I2CHandle;
 TIM_Handle_t Timer5_Handle;
 extern int16_t connectionHandler[2];
+USBD_HandleTypeDef hUsbDeviceFS;
+extern TIM_HandleTypeDef        htim6;
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 /*
  * Embedded Systems Programming on ARM Cortex-M3/M4 Processor lecture 79
 
@@ -27,7 +38,10 @@ extern int16_t connectionHandler[2];
 void TIM5_init(void)
 {
 	Timer5_Handle.pTIMx = TIM5;
-	Timer5_Handle.Prescalar = 15999;
+	if(((RCC->CFGR >> 2) & 0x3) == 0)
+		Timer5_Handle.Prescalar = 15999;
+	else
+		Timer5_Handle.Prescalar = 47999;
 	//Timer5_Handle.Reload_Val = 1000;
 	timer_set_ms(&Timer5_Handle, LED_PERIOD_MS);
 	timer_init(&Timer5_Handle);
@@ -65,7 +79,9 @@ volatile int8_t start_flag = 0;
 volatile uint32_t one_min_cnt = ONE_MIN_CNT;
 int dataAvailable = 0;
 volatile uint8_t is_discoverable = 1;
-
+void SystemClock_Config(void);
+void HAL_EnableCompensationCell(void);
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 uint8_t start_frame[4]= {0x10, 0x01, 0x10, 0x01};
 uint8_t student_id[8]= {0x00, 0x01, 0x01, 0x01, 0x10, 0x11, 0x00, 0x11}; //ID is 5555
 int16_t x;
@@ -83,6 +99,9 @@ int16_t z;
 	https://docs.google.com/document/d/1LF4pFkJgdbv1WE2SsijvQHM_YJ8eBC7BEsMf994AXnU/edit?tab=t.0#heading=h.lc5fcf8se9xg
 
 https://github.com/ucsd-cse190b-w25/project-3-adding-low-energy-radio-communication-teamone?tab=readme-ov-file
+
+For stm32f4 USB
+https://github.com/STMicroelectronics/STM32CubeF4
 
 target remote localhost:3333
 monitor reset init
@@ -130,11 +149,73 @@ uint8_t Read_movement(void)
 	return 0;
 }
 
+#define OTG_FS_PowerSwitchOn_Pin GPIO_PIN_NO_0
+#define OTG_FS_PowerSwitchOn_GPIO_Port GPIOC
+
+#define OTG_FS_OverCurrent_Pin GPIO_PIN_NO_5
+#define OTG_FS_OverCurrent_GPIO_Port GPIOD
+GPIO_Handle_t	USB_FS_GPIO;
+void USB_FS_GPIO_INIT(void)
+{
+    USB_FS_GPIO.pGPIOx = OTG_FS_PowerSwitchOn_GPIO_Port;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinNumber = OTG_FS_PowerSwitchOn_Pin;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_LOW;
+    GPIO_Init(&USB_FS_GPIO);
+	GPIO_WriteToOutputPin(OTG_FS_PowerSwitchOn_GPIO_Port, OTG_FS_PowerSwitchOn_Pin, 1);
+
+    USB_FS_GPIO.pGPIOx = OTG_FS_OverCurrent_GPIO_Port;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinNumber = OTG_FS_OverCurrent_Pin;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_IN;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
+    USB_FS_GPIO.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
+	GPIO_Init(&USB_FS_GPIO);
+}
+
 int main(void)
 {
+	dwt_init();
 	int lost_cnt_sec = 0;
-	//return 0;
 	//initialise_monitor_handles();
+
+	HAL_Init();
+	//Set_PLL_Clock();
+	SystemClock_Config();
+	//HAL_EnableCompensationCell();
+
+	//USB_FS_GPIO_INIT();
+
+	if(USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS) != USBD_OK)
+	{
+		//Error_Handler();
+		printf("fail 1\n");
+	}else printf("ok\n");
+	
+	if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK)
+	{
+		//Error_Handler();
+		printf("fail 2\n");
+	}else printf("ok\n");
+
+	if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK)
+	{
+		//Error_Handler();
+		printf("fail 3\n");
+	}else printf("ok\n");
+
+	if (USBD_Start(&hUsbDeviceFS) != USBD_OK)
+	{
+		//Error_Handler();
+		printf("fail 4\n");
+	}else printf("ok\n");
+
+	while(1);
+	return 0;
+
+	
+	//
 	dwt_init();
 	LIS3DSH_init();
 	led_init();
@@ -218,6 +299,22 @@ void TIM5_IRQHandler(void)
  	// Timer5_Handle.pTIMx->SR &= ~(1<<0);
 }
 
+void TIM6_DAC_IRQHandler(void)
+{
+	HAL_TIM_IRQHandler(&htim6);
+}
+
+void OTG_FS_IRQHandler(void)
+{
+  /* USER CODE BEGIN OTG_FS_IRQn 0 */
+  //printf("otg fs\n");
+  /* USER CODE END OTG_FS_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
+  /* USER CODE BEGIN OTG_FS_IRQn 1 */
+
+  /* USER CODE END OTG_FS_IRQn 1 */
+}
+
 void EXTI9_5_IRQHandler(void)
 {
 	dataAvailable=1;
@@ -227,5 +324,94 @@ void EXTI9_5_IRQHandler(void)
 void I2C_ApplicationEventCallback(I2C_Handle_t *pI2CHandle,uint8_t AppEv)
 {
 	return;
+}
+
+void SystemClock_Config(void)
+{
+  printf("set clock 1\n");
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 72;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 3;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    //Error_Handler();
+	printf("fail\n");
+  }
+  printf("set clock 2\n");
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != 0x00)
+  {
+    //Error_Handler();
+	printf("fail\n");
+  }
+  printf("set clock ok\n");
+}
+
+void HAL_EnableCompensationCell(void)
+{
+  *(volatile uint32_t *)CMPCR_CMP_PD_BB = (uint32_t)ENABLE;
+}
+
+
+void HAL_NVIC_SetPriorityGrouping(uint32_t PriorityGroup)
+{
+  uint32_t reg_value;
+  uint32_t PriorityGroupTmp = (PriorityGroup & (uint32_t)0x07UL);             /* only values 0..7 are used          */
+
+  reg_value  =  SCB->AIRCR;                                                   /* read old register configuration    */
+  reg_value &= ~((uint32_t)(SCB_AIRCR_VECTKEY_Msk | SCB_AIRCR_PRIGROUP_Msk)); /* clear bits to change               */
+  reg_value  =  (reg_value                                   |
+                ((uint32_t)0x5FAUL << SCB_AIRCR_VECTKEY_Pos) |
+                (PriorityGroupTmp << 8U)                      );              /* Insert write key and priorty group */
+  SCB->AIRCR =  reg_value;
+}
+
+
+void HAL_MspInit(void)
+{
+  /* USER CODE BEGIN MspInit 0 */
+
+  /* USER CODE END MspInit 0 */
+
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+  __HAL_RCC_PWR_CLK_ENABLE();
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM6) 
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
 }
 // #endif
