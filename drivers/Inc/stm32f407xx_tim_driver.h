@@ -204,6 +204,7 @@ HAL_StatusTypeDef HAL_TIM_Base_Init(TIM_HandleTypeDef *htim);
 HAL_StatusTypeDef HAL_TIM_Base_Start_IT(TIM_HandleTypeDef *htim);
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority);
 void HAL_TIM_IRQHandler(TIM_HandleTypeDef *htim);
+void NVIC_EnableIRQ(uint16_t IRQn);
 #define TIM_SR_UIF_Pos            (0U)                                         
 #define TIM_SR_UIF_Msk            (0x1UL << TIM_SR_UIF_Pos)                     /*!< 0x00000001 */
 #define TIM_SR_UIF                TIM_SR_UIF_Msk                               

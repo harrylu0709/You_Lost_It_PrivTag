@@ -746,7 +746,7 @@ void HAL_NVIC_SetPriority(int IRQn, uint32_t PreemptPriority, uint32_t SubPriori
 GPIO_Handle_t USB_FS;
 void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
 {
-#if 0
+#if 1
   if(pcdHandle->Instance==USB_OTG_FS)
   {
     __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -758,12 +758,18 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* pcdHandle)
     
     GPIO_Init(&USB_FS);
 
-    USB_FS.GPIO_PinConfig.GPIO_PinNumber = OTG_FS_ID_Pin|OTG_FS_DM_Pin|OTG_FS_DP_Pin;
+    USB_FS.GPIO_PinConfig.GPIO_PinNumber = OTG_FS_ID_Pin;
     USB_FS.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ALTFN;
-    USB_FS.GPIO_PinConfig.GPIO_PinAltFunMode = ((uint8_t)0x0A);
+    USB_FS.GPIO_PinConfig.GPIO_PinAltFunMode = GPIO_AF10_OTG_FS;
     USB_FS.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
     USB_FS.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
     USB_FS.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_LOW;
+    GPIO_Init(&USB_FS);
+
+    USB_FS.GPIO_PinConfig.GPIO_PinNumber = OTG_FS_DM_Pin;
+    GPIO_Init(&USB_FS);
+
+    USB_FS.GPIO_PinConfig.GPIO_PinNumber = OTG_FS_DP_Pin;
     GPIO_Init(&USB_FS);
 
     __HAL_RCC_USB_OTG_FS_CLK_ENABLE();

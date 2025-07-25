@@ -40,6 +40,9 @@ extern "C" {
   * @{
   */
 
+#define GPIO_AF10_OTG_FS        ((uint8_t)0x0A)  /* OTG_FS Alternate Function mapping */
+#define GPIO_AF10_OTG_HS        ((uint8_t)0x0A)  /* OTG_HS Alternate Function mapping */
+
 #ifndef NULL
 #define NULL                                            0U
 #endif /* NULL */

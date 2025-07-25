@@ -49,7 +49,7 @@ void timer_init(TIM_Handle_t *pTIMHandle)
 
 	/* Enable NVIC Interrupt for Timer */
 	TIM_IRQInterruptConfig(IRQ_NO_TIM5, ENABLE);
-	TIM_IRQPriorityConfig(IRQ_NO_TIM5, NVIC_IRQ_PRI15);
+	TIM_IRQPriorityConfig(IRQ_NO_TIM5, NVIC_IRQ_PRI0);
 
 	/* Finally enable Timer count */
 	pTIMHandle->pTIMx->CR1 |= 0x1;
@@ -485,7 +485,6 @@ __weak void HAL_TIMEx_CommutCallback(TIM_HandleTypeDef *htim)
 }
 void HAL_TIM_IRQHandler(TIM_HandleTypeDef *htim)
 {
-  GPIO_WriteToOutputPin(GPIOD, 14, 1);
   /* Capture compare 1 event */
   if (__HAL_TIM_GET_FLAG(htim, TIM_FLAG_CC1) != RESET)
   {

@@ -327,18 +327,21 @@ int fetchBleEvent(uint8_t * container, int size)
 	uint8_t slave_header[5];
 
 	//Wait until it is available an event coming from the BLE module (GPIO PIN COULD CHANGE ACCORDING TO THE BOARD)
+#if 0
 	int cnt = 0;
 	while(GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin) == 0)
 	{
 		cnt++;
-		if(cnt > 10000)
+		if(cnt > 30000)
 		{
 			cnt = 0;
 			break;
 		}
 	}
-	//if (GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin))
 	if(1)
+#else
+	if (GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin))
+#endif
 	{
 
 		dwt_delay_ms(5);
@@ -447,12 +450,19 @@ void catchBLE(uint8_t * byte1, uint8_t * byte2)
 {
 
 	int result = fetchBleEvent(buffer, 127);
+	
+	// int i;
+	// for(i=0;i<5;i++)
+	// {
+	// 	printf("%x ",buffer[i]);
+	// }
+	// printf("\n");
 	if (result == BLE_OK)
 	{
 		if (checkEventResp(buffer, EVENT_DISCONNECTED, 3) == BLE_OK)
 		{
 			//printf("disconnect\n");
-			//setConnectable();
+			setConnectable();
 		}
 		if (checkEventResp(buffer, EVENT_CONNECTED, 5) == BLE_OK)
 		{
@@ -668,8 +678,9 @@ void disconnectBLE()
 	int result = 1;
 	if (BLE_command(command, sizeof(command), EVENT_DISCONNECT_PENDING, 7, 0) == BLE_OK)
 	{
+		dwt_delay_ms(80);
 		result = fetchBleEvent(buffer, 127);
-		if (result == BLE_OK)
+		if(result == BLE_OK)
 		{
 			if (checkEventResp(buffer, EVENT_DISCONNECTED, 4) == BLE_OK)
 			{

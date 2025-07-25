@@ -18,7 +18,7 @@
 #define LED_PERIOD_MS	  	500
 #define ONE_MIN_CNT	 	  	(NON_DISCOVER_SEC*(1000/LED_PERIOD_MS))
 #define IRQNO_TIMER5  	  	50
-#define TEN_SEC			  	3000
+#define TEN_SEC			  	2000
 #define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
 #define DWT_CYCCNT  		(*(volatile uint32_t*)0xE0001004)
 #define DEMCR       		(*(volatile uint32_t*)0xE000EDFC)
@@ -38,12 +38,15 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 void TIM5_init(void)
 {
 	Timer5_Handle.pTIMx = TIM5;
-	if(((RCC->CFGR >> 2) & 0x3) == 0)
-		Timer5_Handle.Prescalar = 15999;
-	else
-		Timer5_Handle.Prescalar = 47999;
-	//Timer5_Handle.Reload_Val = 1000;
-	timer_set_ms(&Timer5_Handle, LED_PERIOD_MS);
+	// if(((RCC->CFGR >> 2) & 0x3) == 0)
+	// 	Timer5_Handle.Prescalar = 15999;
+	// else
+	// 	Timer5_Handle.Prescalar = 47999;
+	//Timer5_Handle.Prescalar = (HAL_RCC_GetHCLKFreq()/1000) - 1;	
+
+	//Timer5_Handle.Prescalar = 7999;
+	Timer5_Handle.Prescalar = 35999;	
+	timer_set_ms(&Timer5_Handle, 1000);
 	timer_init(&Timer5_Handle);
 }	
 
@@ -56,7 +59,9 @@ void dwt_init(void)
 
 void dwt_delay_us(uint32_t us) 
 {
-    uint32_t cycles = us * 16;  // 16 MHz = 16 cycles per microsecond
+	//int cyc_unit = HAL_RCC_GetHCLKFreq()/1000000;
+	int cyc_unit = 72;
+    uint32_t cycles = us * cyc_unit;  // 16 MHz = 16 cycles per microsecond
     uint32_t start = DWT_CYCCNT;
     while ((DWT_CYCCNT - start) < cycles);
 }
@@ -143,7 +148,7 @@ uint8_t Read_movement(void)
 #endif
 	  )
 	{
-		one_min_cnt = ONE_MIN_CNT;
+		//one_min_cnt = ONE_MIN_CNT;
 		return 1;
 	}
 	return 0;
@@ -176,10 +181,9 @@ void USB_FS_GPIO_INIT(void)
 
 int main(void)
 {
-	dwt_init();
 	int lost_cnt_sec = 0;
-	//initialise_monitor_handles();
-
+	initialise_monitor_handles();
+	
 	HAL_Init();
 	//Set_PLL_Clock();
 	SystemClock_Config();
@@ -211,25 +215,22 @@ int main(void)
 		printf("fail 4\n");
 	}else printf("ok\n");
 
-	while(1);
-	return 0;
-
-	
-	//
+	// printf("%ld\n",HAL_RCC_GetHCLKFreq()); //72000000
 	dwt_init();
 	LIS3DSH_init();
 	led_init();
-	
+
 	xnucleo_init();
 
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_RESET);
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(BLE_GPIO_PORT,BLE_RST_Pin,GPIO_PIN_SET);
-
+	
 	ble_init();
 	dwt_delay_ms(10);
 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_BLUE, 0);
 	TIM5_init();
+	
     // /* Manually trigger TIM5 interrupt */
 	//*pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
 
@@ -237,6 +238,7 @@ int main(void)
 
 	while(1)
 	{
+		//printf("%d\n",hUsbDeviceFS.dev_state);
 		if(one_min_cnt)
 		{
 			setDiscoverability(0);
@@ -244,42 +246,98 @@ int main(void)
 		}
 		else
 		{
-			//dwt_delay_ms(30);
-			if(!is_discoverable)
+			if(hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED)
 			{
-				setDiscoverability(1);
-				//leds_set(1);
-			}	
-			if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin))
-			{
-				catchBLE();
-			}
-			else
-			{
+				//disconnectBLE();
+				leds_set(1);
 				int i = TEN_SEC;
 				int move_flag = 1;				
 				while (i--) 
 				{
 					dwt_delay_ms(1);
-					if(Read_movement())
+					if(Read_movement() || (hUsbDeviceFS.dev_state == USBD_STATE_SUSPENDED))
 					{
+						one_min_cnt = ONE_MIN_CNT;
 						lost_cnt_sec = 0;
 						move_flag = 0;
 						GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
-						disconnectBLE();
+
 						break;
 					}
     			}
 				if(move_flag)
 				{
 					lost_cnt_sec += (TEN_SEC/1000);
-					unsigned char test_str[] = "lost for     sec";
-					test_str[9] = (lost_cnt_sec / 100) +'0';
-					test_str[10] = (lost_cnt_sec / 10) +'0';
-					test_str[11] = (lost_cnt_sec % 10)+'0';
-					updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);	
+					unsigned char test_str[] = "freeze for     sec\n";
+					test_str[11] = (lost_cnt_sec / 100) +'0';
+					test_str[12] = (lost_cnt_sec / 10) +'0';
+					test_str[13] = (lost_cnt_sec % 10)+'0';
+					if(CDC_Transmit_FS(test_str, sizeof(test_str)) != USBD_OK)
+					{
+						one_min_cnt = ONE_MIN_CNT;
+						GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+						break;
+					}
 				}
 			}
+			else
+			{
+				dwt_delay_ms(30);
+				if(!is_discoverable)
+				{
+					//if(hUsbDeviceFS.dev_state != USBD_STATE_CONFIGURED)
+					if(1)
+					{
+						setDiscoverability(1);
+					}
+					leds_set(1);
+				}	
+				if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin))
+				{
+					//printf("catch\n");
+					catchBLE();
+				}
+				else
+				{
+					int i = TEN_SEC;
+					int move_flag = 1;				
+					while (i--) 
+					{
+						dwt_delay_ms(1);
+						if(Read_movement())
+						{
+							one_min_cnt = ONE_MIN_CNT;
+							lost_cnt_sec = 0;
+							move_flag = 0;
+							GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+							disconnectBLE();
+							break;
+						}
+						if(hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED)
+						{
+							lost_cnt_sec = 0;
+							move_flag = 0;
+							disconnectBLE();
+							GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+							one_min_cnt = ONE_MIN_CNT;
+							break;
+						}	
+					}
+					if(move_flag)
+					{
+						lost_cnt_sec += (TEN_SEC/1000);
+						unsigned char test_str[] = "freeze for     sec";
+						test_str[11] = (lost_cnt_sec / 100) +'0';
+						test_str[12] = (lost_cnt_sec / 10) +'0';
+						test_str[13] = (lost_cnt_sec % 10)+'0';
+						// if(hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED)
+						// 	CDC_Transmit_FS(test_str, sizeof(test_str));
+						// else
+						updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);
+					}
+				}
+			}
+
 			// Wait for interrupt, only uncomment if low power is needed
 			//__WFI();
 		}

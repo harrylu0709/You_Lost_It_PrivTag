@@ -1142,7 +1142,6 @@ void HAL_PCD_IRQHandler(PCD_HandleTypeDef *hpcd)
 
           if ((epint & USB_OTG_DOEPINT_STUP) == USB_OTG_DOEPINT_STUP)
           {
-            printf("outep\n");
             CLEAR_OUT_EP_INTR(epnum, USB_OTG_DOEPINT_STUP);
             /* Class B setup phase done for previous decoded setup */
             (void)PCD_EP_OutSetupPacket_int(hpcd, epnum);
