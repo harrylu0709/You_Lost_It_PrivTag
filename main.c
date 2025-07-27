@@ -13,67 +13,28 @@
 #include "stm32f4xx_hal_def.h"
 #include "stm32f4xx_hal_pcd.h"
 
-#define SYSTICK_TIM_CLK   	16000000UL //16MHz
-#define NON_DISCOVER_SEC	10
-#define LED_PERIOD_MS	  	500
-#define ONE_MIN_CNT	 	  	(NON_DISCOVER_SEC*(1000/LED_PERIOD_MS))
-#define IRQNO_TIMER5  	  	50
-#define TEN_SEC			  	2000
-#define DWT_CTRL    		(*(volatile uint32_t*)0xE0001000)
-#define DWT_CYCCNT  		(*(volatile uint32_t*)0xE0001004)
-#define DEMCR       		(*(volatile uint32_t*)0xE000EDFC)
-#define READ_Z_AXIS			0
-extern I2C_Handle_t g_ds1307I2CHandle;
+#define SYSTICK_TIM_CLK   				16000000UL //16MHz
+#define NON_DISCOVER_SEC				10
+#define LED_PERIOD_MS	  				500
+#define DETECT_MOVING_PERIOD	 	  	(NON_DISCOVER_SEC*(1000/LED_PERIOD_MS))
+#define MSG_RATE			  		    2000
+#define DWT_CTRL    					(*(volatile uint32_t*)0xE0001000)
+#define DWT_CYCCNT  					(*(volatile uint32_t*)0xE0001004)
+#define DEMCR       					(*(volatile uint32_t*)0xE000EDFC)
+#define READ_Z_AXIS						0
+
 TIM_Handle_t Timer5_Handle;
-extern int16_t connectionHandler[2];
 USBD_HandleTypeDef hUsbDeviceFS;
+
+extern int16_t connectionHandler[2];
+extern I2C_Handle_t g_ds1307I2CHandle;
 extern TIM_HandleTypeDef        htim6;
-extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+extern PCD_HandleTypeDef 		hpcd_USB_OTG_FS;
 /*
  * Embedded Systems Programming on ARM Cortex-M3/M4 Processor lecture 79
 
  * Section 4.4 of Cortex -M4 Devices Generic User Guide
 */
-
-void TIM5_init(void)
-{
-	Timer5_Handle.pTIMx = TIM5;
-	// if(((RCC->CFGR >> 2) & 0x3) == 0)
-	// 	Timer5_Handle.Prescalar = 15999;
-	// else
-	// 	Timer5_Handle.Prescalar = 47999;
-	//Timer5_Handle.Prescalar = (HAL_RCC_GetHCLKFreq()/1000) - 1;	
-
-	//Timer5_Handle.Prescalar = 7999;
-	Timer5_Handle.Prescalar = 35999;	
-	timer_set_ms(&Timer5_Handle, 1000);
-	timer_init(&Timer5_Handle);
-}	
-
-void dwt_init(void) 
-{
-    DEMCR |= (1 << 24);     // Enable trace and debug
-    DWT_CTRL |= 1;          // Enable the cycle counter
-    DWT_CYCCNT = 0;         // Reset the counter
-}
-
-void dwt_delay_us(uint32_t us) 
-{
-	//int cyc_unit = HAL_RCC_GetHCLKFreq()/1000000;
-	int cyc_unit = 72;
-    uint32_t cycles = us * cyc_unit;  // 16 MHz = 16 cycles per microsecond
-    uint32_t start = DWT_CYCCNT;
-    while ((DWT_CYCCNT - start) < cycles);
-}
-
-void dwt_delay_ms(uint32_t ms) 
-{
-    while (ms--) 
-	{
-        dwt_delay_us(1000);
-    }
-}
-
 
 //semihosting init function
 extern void initialise_monitor_handles(void);
@@ -81,18 +42,19 @@ uint32_t *pNVIC_ISPR1 = (uint32_t*)0xE000E204;
 volatile uint8_t start_cnt = 0;
 volatile uint8_t id_cnt = 0;
 volatile int8_t start_flag = 0;
-volatile uint32_t one_min_cnt = ONE_MIN_CNT;
+volatile uint32_t moving_cnt = DETECT_MOVING_PERIOD;
 int dataAvailable = 0;
 volatile uint8_t is_discoverable = 1;
 void SystemClock_Config(void);
 void HAL_EnableCompensationCell(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
-uint8_t start_frame[4]= {0x10, 0x01, 0x10, 0x01};
-uint8_t student_id[8]= {0x00, 0x01, 0x01, 0x01, 0x10, 0x11, 0x00, 0x11}; //ID is 5555
+void update_msg(unsigned char *msg);
+
 int16_t x;
 int16_t y;
 int16_t z;
-
+int lost_cnt_sec = 0;
+int dwt_cyc_unit = 0;
 /*
 	part1
 	https://docs.google.com/document/d/16My2VHtrzub1NycOldHII0mE8Xq-i0LB490brx3gpcc/edit?tab=t.0#heading=h.uu6cpqw6zjbz
@@ -116,6 +78,45 @@ monitor reset halt
 monitor resume
 
 	*/
+
+
+void TIM5_init(void)
+{
+	Timer5_Handle.pTIMx = TIM5;
+
+	if(((RCC->CFGR >> 2) & 0x3) == 0)
+		Timer5_Handle.Prescalar = 7999;
+	else
+		Timer5_Handle.Prescalar = 35999;	
+		
+	timer_set_ms(&Timer5_Handle, 1000);
+	timer_init(&Timer5_Handle);
+}	
+
+void dwt_init(void) 
+{
+    DEMCR |= (1 << 24);     // Enable trace and debug
+    DWT_CTRL |= 1;          // Enable the cycle counter
+    DWT_CYCCNT = 0;         // Reset the counter
+	dwt_cyc_unit = HAL_RCC_GetHCLKFreq()/1000000;
+}
+
+void dwt_delay_us(uint32_t us) 
+{
+	
+    uint32_t cycles = us * dwt_cyc_unit;  // 16 MHz = 16 cycles per microsecond
+    uint32_t start = DWT_CYCCNT;
+    while ((DWT_CYCCNT - start) < cycles);
+}
+
+void dwt_delay_ms(uint32_t ms) 
+{
+    while (ms--) 
+	{
+        dwt_delay_us(1000);
+    }
+}
+
 
 int twos_complement_to_signed(int value, int bitWidth) 
 {
@@ -148,7 +149,7 @@ uint8_t Read_movement(void)
 #endif
 	  )
 	{
-		//one_min_cnt = ONE_MIN_CNT;
+		//moving_cnt = DETECT_MOVING_PERIOD;
 		return 1;
 	}
 	return 0;
@@ -181,37 +182,31 @@ void USB_FS_GPIO_INIT(void)
 
 int main(void)
 {
-	int lost_cnt_sec = 0;
 	initialise_monitor_handles();
 	
 	HAL_Init();
 	//Set_PLL_Clock();
 	SystemClock_Config();
-	//HAL_EnableCompensationCell();
 
 	//USB_FS_GPIO_INIT();
 
 	if(USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS) != USBD_OK)
 	{
-		//Error_Handler();
 		printf("fail 1\n");
 	}else printf("ok\n");
 	
 	if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK)
 	{
-		//Error_Handler();
 		printf("fail 2\n");
 	}else printf("ok\n");
 
 	if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK)
 	{
-		//Error_Handler();
 		printf("fail 3\n");
 	}else printf("ok\n");
 
 	if (USBD_Start(&hUsbDeviceFS) != USBD_OK)
 	{
-		//Error_Handler();
 		printf("fail 4\n");
 	}else printf("ok\n");
 
@@ -232,14 +227,14 @@ int main(void)
 	TIM5_init();
 	
     // /* Manually trigger TIM5 interrupt */
-	//*pNVIC_ISPR1 |= (1 << (IRQNO_TIMER5 % 32));
+	//*pNVIC_ISPR1 |= (1 << (IRQ_NO_TIM5 % 32));
 
 	uint8_t nonDiscoverable = 0;
 
 	while(1)
 	{
 		//printf("%d\n",hUsbDeviceFS.dev_state);
-		if(one_min_cnt)
+		if(moving_cnt)
 		{
 			setDiscoverability(0);
 			Read_movement();
@@ -248,36 +243,33 @@ int main(void)
 		{
 			if(hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED)
 			{
-				//disconnectBLE();
 				leds_set(1);
-				int i = TEN_SEC;
+				int i = MSG_RATE;
 				int move_flag = 1;				
 				while (i--) 
 				{
 					dwt_delay_ms(1);
 					if(Read_movement() || (hUsbDeviceFS.dev_state == USBD_STATE_SUSPENDED))
 					{
-						one_min_cnt = ONE_MIN_CNT;
+						moving_cnt = DETECT_MOVING_PERIOD;
 						lost_cnt_sec = 0;
 						move_flag = 0;
 						GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
-
 						break;
 					}
     			}
 				if(move_flag)
 				{
-					lost_cnt_sec += (TEN_SEC/1000);
-					unsigned char test_str[] = "freeze for     sec\n";
-					test_str[11] = (lost_cnt_sec / 100) +'0';
-					test_str[12] = (lost_cnt_sec / 10) +'0';
-					test_str[13] = (lost_cnt_sec % 10)+'0';
-					if(CDC_Transmit_FS(test_str, sizeof(test_str)) != USBD_OK)
-					{
-						one_min_cnt = ONE_MIN_CNT;
-						GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
-						break;
-					}
+					unsigned char msg_str[] = "freeze for        \n";
+					update_msg(msg_str);
+					// if(CDC_Transmit_FS(msg_str, sizeof(msg_str)) != USBD_OK)
+					// {
+
+					// 	moving_cnt = DETECT_MOVING_PERIOD;
+					// 	GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
+					// 	break;
+					// }
+					CDC_Transmit_FS(msg_str, sizeof(msg_str));
 				}
 			}
 			else
@@ -285,28 +277,23 @@ int main(void)
 				dwt_delay_ms(30);
 				if(!is_discoverable)
 				{
-					//if(hUsbDeviceFS.dev_state != USBD_STATE_CONFIGURED)
-					if(1)
-					{
-						setDiscoverability(1);
-					}
+					setDiscoverability(1);
 					leds_set(1);
 				}	
 				if(!nonDiscoverable && GPIO_ReadFromInputPin(BLE_GPIO_PORT, BLE_INT_Pin))
 				{
-					//printf("catch\n");
 					catchBLE();
 				}
 				else
 				{
-					int i = TEN_SEC;
+					int i = MSG_RATE;
 					int move_flag = 1;				
 					while (i--) 
 					{
 						dwt_delay_ms(1);
 						if(Read_movement())
 						{
-							one_min_cnt = ONE_MIN_CNT;
+							moving_cnt = DETECT_MOVING_PERIOD;
 							lost_cnt_sec = 0;
 							move_flag = 0;
 							GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
@@ -319,25 +306,18 @@ int main(void)
 							move_flag = 0;
 							disconnectBLE();
 							GPIO_WriteToOutputPin(LED_GPIO_PORT, LED_GPIO_GREEN, 0);
-							one_min_cnt = ONE_MIN_CNT;
+							moving_cnt = DETECT_MOVING_PERIOD;
 							break;
 						}	
 					}
 					if(move_flag)
 					{
-						lost_cnt_sec += (TEN_SEC/1000);
-						unsigned char test_str[] = "freeze for     sec";
-						test_str[11] = (lost_cnt_sec / 100) +'0';
-						test_str[12] = (lost_cnt_sec / 10) +'0';
-						test_str[13] = (lost_cnt_sec % 10)+'0';
-						// if(hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED)
-						// 	CDC_Transmit_FS(test_str, sizeof(test_str));
-						// else
-						updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(test_str), test_str);
+						unsigned char msg_str[] = "freeze for     sec";
+						update_msg(msg_str);
+						updateCharValue(NORDIC_UART_SERVICE_HANDLE, WRITE_CHAR_HANDLE, 0, sizeof(msg_str), msg_str);
 					}
 				}
 			}
-
 			// Wait for interrupt, only uncomment if low power is needed
 			//__WFI();
 		}
@@ -345,12 +325,35 @@ int main(void)
 	return 0;
 }
 
+void update_msg(unsigned char *msg)
+{
+	lost_cnt_sec += (MSG_RATE/1000);
+
+	if(lost_cnt_sec >= 100)
+	{
+		msg[11] = (lost_cnt_sec / 100) +'0';
+		msg[12] = (lost_cnt_sec / 10) % 10 +'0';
+		msg[13] = (lost_cnt_sec % 10)+'0';
+		memcpy(msg + 14, " sec", 4);
+	}
+	else if(lost_cnt_sec >=10)
+	{
+		msg[11] = (lost_cnt_sec / 10) % 10 +'0';
+		msg[12] = (lost_cnt_sec % 10)+'0';
+		memcpy(msg + 13, " sec", 4);
+	}
+	else
+	{
+		msg[11] = (lost_cnt_sec % 10)+'0';
+		memcpy(msg + 12, " sec", 4);
+	}
+}
 
 void TIM5_IRQHandler(void)
 {
-	if(one_min_cnt > 0)
+	if(moving_cnt > 0)
 	{
-		one_min_cnt--;
+		moving_cnt--;
 		GPIO_ToggleOutputPin(LED_GPIO_PORT, LED_GPIO_RED);
 	}
 	TIM_IRQHandling(&Timer5_Handle);
@@ -365,7 +368,6 @@ void TIM6_DAC_IRQHandler(void)
 void OTG_FS_IRQHandler(void)
 {
   /* USER CODE BEGIN OTG_FS_IRQn 0 */
-  //printf("otg fs\n");
   /* USER CODE END OTG_FS_IRQn 0 */
   HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
   /* USER CODE BEGIN OTG_FS_IRQn 1 */
@@ -386,7 +388,7 @@ void I2C_ApplicationEventCallback(I2C_Handle_t *pI2CHandle,uint8_t AppEv)
 
 void SystemClock_Config(void)
 {
-  printf("set clock 1\n");
+//   printf("set clock 1\n");
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
@@ -411,7 +413,7 @@ void SystemClock_Config(void)
     //Error_Handler();
 	printf("fail\n");
   }
-  printf("set clock 2\n");
+//   printf("set clock 2\n");
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -426,7 +428,7 @@ void SystemClock_Config(void)
     //Error_Handler();
 	printf("fail\n");
   }
-  printf("set clock ok\n");
+//   printf("set clock ok\n");
 }
 
 void HAL_EnableCompensationCell(void)
