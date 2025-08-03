@@ -142,27 +142,26 @@ uint8_t SPI_GetFlagStatus(SPI_RegDef_t *pSPIx , uint32_t FlagName)
 #if 0
 void SPI_TransmitReceive(SPI_RegDef_t *pSPIx,uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t TxLen, uint32_t RxLen)
 {
-	//printf("start\n");
+	printf("start\n");
 	uint8_t dummy[255];
 	SPI_SendData(pSPIx, pTxBuffer, TxLen);
 	while(SPI_GetFlagStatus(pSPIx, SPI_BUSY_FLAG));
-	//printf("s1\n");
+	printf("s1\n");
 	SPI_ReceiveData(pSPIx, dummy, RxLen);
-	//printf("finish receive\n");
+	printf("finish receive\n");
 	while(SPI_GetFlagStatus(pSPIx, SPI_BUSY_FLAG));
-	//printf("r1\n");
+	printf("r1\n");
 	SPI_SendData(pSPIx, dummy, TxLen);
 	while(SPI_GetFlagStatus(pSPIx, SPI_BUSY_FLAG));
-	//printf("s2\n");
+	printf("s2\n");
 	SPI_ReceiveData(pSPIx, pRxBuffer, RxLen);
 	while(SPI_GetFlagStatus(pSPIx, SPI_BUSY_FLAG));
-	//printf("end\n");
+	printf("end\n");
 }
 #else
-void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t TxLen, uint32_t RxLen)
+void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBuffer, uint32_t Len, uint32_t RxLen)
 {
-#if 0
-    while (TxLen > 0)
+    while (Len > 0)
     {
         // Wait until TXE is set
         while (SPI_GetFlagStatus(pSPIx, SPI_TXE_FLAG) == FLAG_RESET);
@@ -172,7 +171,7 @@ void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBu
         {
             // 16-bit
             pSPIx->DR = *((uint16_t*)pTxBuffer);
-            TxLen -= 2;
+            Len -= 2;
 
             // Wait until RXNE is set
             while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
@@ -186,7 +185,7 @@ void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBu
         {
             // 8-bit
             pSPIx->DR = *pTxBuffer;
-            TxLen--;
+            Len--;
 
             // Wait until RXNE is set
             while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
@@ -197,45 +196,6 @@ void SPI_TransmitReceive(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint8_t *pRxBu
             pRxBuffer++;
         }
     }
-#else
-   uint8_t  txallowed = 1; 
-	// 1. Check DFF bit for 8-bit or 16-bit mode
-	if (pSPIx->CR1 & (1 << SPI_CR1_DFF))
-	{
-		// // 16-bit
-		// pSPIx->DR = *((uint16_t*)pTxBuffer);
-		// TxLen -= 2;
-
-		// // Wait until RXNE is set
-		// while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET);
-
-		// *((uint16_t*)pRxBuffer) = pSPIx->DR;
-
-		// pTxBuffer += 2;
-		// pRxBuffer += 2;
-	}
-	else
-	{
-		while(TxLen > 0 || RxLen > 0)
-		{
-			if(SPI_GetFlagStatus(pSPIx, SPI_TXE_FLAG) == FLAG_SET && (TxLen > 0)  && (txallowed == 1))
-			{
-				pSPIx->DR = *pTxBuffer;
-				pTxBuffer++;
-				TxLen--;
-				txallowed = 0;
-			}
-			if(SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_SET && (RxLen > 0)) 
-			{
-				*pRxBuffer = pSPIx->DR;
-				pRxBuffer++;
-				RxLen--;
-				txallowed = 1;
-			}
-		}
-	}
-
-#endif
 }
 #endif
 /*********************************************************************
